@@ -16,6 +16,7 @@ jobs:
           test ! -e AGENTS.md
           test ! -d scripts
           test ! -d tools
+          test ! -d docs
           test ! -d docs/repository
           test ! -d docs/superpowers
           test ! -d docs/ui-review

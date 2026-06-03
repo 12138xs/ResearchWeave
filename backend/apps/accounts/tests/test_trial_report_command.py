@@ -69,8 +69,8 @@ class TrialReportCommandTests(TestCase):
 
     def test_reports_member_account_readiness_when_usernames_are_provided(self) -> None:
         User = get_user_model()
-        User.objects.create_user(username="lirongzu", password="secret")
-        User.objects.create_user(username="tankaiyao", password="secret")
+        User.objects.create_user(username="member_alpha", password="secret")
+        User.objects.create_user(username="member_beta", password="secret")
         out = StringIO()
 
         call_command(
@@ -78,11 +78,11 @@ class TrialReportCommandTests(TestCase):
             "--output",
             "-",
             "--member-usernames",
-            "lirongzu,tankaiyao,wangbuxuan",
+            "member_alpha,member_beta,member_gamma",
             stdout=out,
         )
 
         content = out.getvalue()
         self.assertIn("member accounts: 2/3", content)
-        self.assertIn("missing member accounts: wangbuxuan", content)
+        self.assertIn("missing member accounts: member_gamma", content)
         self.assertNotIn("secret", content)

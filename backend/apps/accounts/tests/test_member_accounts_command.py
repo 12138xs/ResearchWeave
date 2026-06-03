@@ -20,7 +20,7 @@ class MemberAccountsCommandTests(TestCase):
         call_command(
             "bootstrap_member_accounts",
             "--usernames",
-            "lirongzu,tankaiyao, wangbuxuan ",
+            "member_alpha,member_beta, member_gamma ",
             "--dry-run",
             stdout=output,
         )
@@ -28,7 +28,7 @@ class MemberAccountsCommandTests(TestCase):
         payload = json.loads(output.getvalue())
         self.assertTrue(payload["dry_run"])
         self.assertEqual(payload["planned_count"], 3)
-        self.assertEqual(payload["missing_usernames"], ["lirongzu", "tankaiyao", "wangbuxuan"])
+        self.assertEqual(payload["missing_usernames"], ["member_alpha", "member_beta", "member_gamma"])
         self.assertEqual(get_user_model().objects.count(), 0)
         self.assertNotIn("password", output.getvalue().lower())
 
@@ -42,7 +42,7 @@ class MemberAccountsCommandTests(TestCase):
             call_command(
                 "bootstrap_member_accounts",
                 "--usernames",
-                "lirongzu,tankaiyao",
+                "member_alpha,member_beta",
                 "--credentials-output",
                 str(credentials_path),
                 stdout=output,
@@ -52,9 +52,9 @@ class MemberAccountsCommandTests(TestCase):
             rows = list(csv.DictReader(credentials_path.open(encoding="utf-8", newline="")))
 
         users = list(get_user_model().objects.order_by("username"))
-        self.assertEqual(payload["created_usernames"], ["lirongzu", "tankaiyao"])
+        self.assertEqual(payload["created_usernames"], ["member_alpha", "member_beta"])
         self.assertEqual(payload["updated_usernames"], [])
-        self.assertEqual([user.username for user in users], ["lirongzu", "tankaiyao"])
+        self.assertEqual([user.username for user in users], ["member_alpha", "member_beta"])
         self.assertTrue(all(user.is_active for user in users))
         self.assertFalse(any(user.is_staff or user.is_superuser for user in users))
         self.assertTrue(users[0].check_password("alpha-password"))
@@ -62,8 +62,8 @@ class MemberAccountsCommandTests(TestCase):
         self.assertEqual(
             rows,
             [
-                {"username": "lirongzu", "password": "alpha-password"},
-                {"username": "tankaiyao", "password": "beta-password"},
+                {"username": "member_alpha", "password": "alpha-password"},
+                {"username": "member_beta", "password": "beta-password"},
             ],
         )
         self.assertNotIn("alpha-password", output.getvalue())
@@ -72,14 +72,14 @@ class MemberAccountsCommandTests(TestCase):
     @patch("apps.accounts.management.commands.bootstrap_member_accounts.secrets.token_urlsafe")
     def test_reset_existing_updates_password_and_records_updated_user(self, token_urlsafe) -> None:
         token_urlsafe.return_value = "new-password"
-        user = get_user_model().objects.create_user(username="lirongzu", password="old-password")
+        user = get_user_model().objects.create_user(username="member_alpha", password="old-password")
         output = StringIO()
 
         with TemporaryDirectory() as tmpdir:
             call_command(
                 "bootstrap_member_accounts",
                 "--usernames",
-                "lirongzu",
+                "member_alpha",
                 "--credentials-output",
                 str(Path(tmpdir) / "members.csv"),
                 "--reset-existing",
@@ -89,7 +89,7 @@ class MemberAccountsCommandTests(TestCase):
         user.refresh_from_db()
         payload = json.loads(output.getvalue())
         self.assertEqual(payload["created_usernames"], [])
-        self.assertEqual(payload["updated_usernames"], ["lirongzu"])
+        self.assertEqual(payload["updated_usernames"], ["member_alpha"])
         self.assertTrue(user.check_password("new-password"))
 
     def test_rejects_empty_username_list(self) -> None:

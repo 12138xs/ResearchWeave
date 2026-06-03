@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="${1:-/home/data2/research_os}"
+ROOT="${1:-${RESEARCHWEAVE_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}}"
 PORT="${RESEARCH_OS_PORT:-30888}"
 SAFE_DOCKER_SUBNET="${RESEARCH_OS_DOCKER_SUBNET:-10.89.0.0/24}"
 SAFE_DOCKER_NETWORK="${RESEARCH_OS_DOCKER_NETWORK:-research_os_safe_default}"

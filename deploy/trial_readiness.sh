@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="${1:-/home/data2/research_os}"
+ROOT="${1:-${RESEARCHWEAVE_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}}"
 SMOKE_STATUS="skipped"
-DEFAULT_MEMBER_USERNAMES="lirongzu tankaiyao wangbuxuan zhangchaochong cenjianhuan liumenghan tanliqin wangxiean zqs chenliao lizongze pengguohang tansiyi"
-MEMBER_USERNAMES="${RESEARCH_OS_MEMBER_USERNAMES:-$DEFAULT_MEMBER_USERNAMES}"
+MEMBER_USERNAMES="${RESEARCH_OS_MEMBER_USERNAMES:-}"
 
 cd "$ROOT"
 
@@ -15,7 +14,11 @@ echo "== Trial Readiness: Trial Accounts Dry Run =="
 docker compose exec -T web python manage.py bootstrap_trial_accounts --dry-run
 
 echo "== Trial Readiness: Member Accounts Dry Run =="
-docker compose exec -T web python manage.py bootstrap_member_accounts --dry-run --usernames "$MEMBER_USERNAMES"
+if [ -n "$MEMBER_USERNAMES" ]; then
+  docker compose exec -T web python manage.py bootstrap_member_accounts --dry-run --usernames "$MEMBER_USERNAMES"
+else
+  echo "SKIP: member accounts dry run (set RESEARCH_OS_MEMBER_USERNAMES)"
+fi
 
 echo "== Trial Readiness: Backup =="
 backup_output="$(bash "$ROOT/deploy/backup.sh" "$ROOT")"
