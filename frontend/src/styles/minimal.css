@@ -1,0 +1,488 @@
+/* v0.4.3 Minimal Research OS */
+:root {
+  --page-bg: #f7f8f8;
+  --page-gradient: linear-gradient(180deg, #fafafa 0%, #f4f5f5 100%);
+  --surface: #ffffff;
+  --surface-strong: #ffffff;
+  --surface-muted: #f4f5f5;
+  --sidebar-bg: #fbfbfa;
+  --border: #e2e4e4;
+  --border-strong: #c9cdcd;
+  --text: #1e2424;
+  --text-strong: #0c1111;
+  --muted: #747c7c;
+  --muted-strong: #424a4a;
+  --primary: #1f5f9e;
+  --primary-hover: #174b80;
+  --primary-soft: #e6f0ff;
+  --primary-border: #8fb3e6;
+  --accent: #9a6a13;
+  --accent-soft: #fff4d6;
+  --accent-border: #d9b354;
+  --danger: #9f3f35;
+  --danger-soft: #fff7f5;
+  --success: #2f6d4f;
+  --shadow: none;
+  --shadow-strong: none;
+  --focus: #1f5f9e;
+}
+
+:root[data-theme="dark"] {
+  --page-bg: #0d1113;
+  --page-gradient: linear-gradient(180deg, rgba(19, 25, 28, 0.96) 0%, rgba(13, 17, 19, 1) 100%);
+  --surface: #151a1d;
+  --surface-strong: #111619;
+  --surface-muted: #1d2428;
+  --sidebar-bg: #0b0f11;
+  --border: #263239;
+  --border-strong: #3a4850;
+  --text: #d5dee2;
+  --text-strong: #f4f7f7;
+  --muted: #8d9ca2;
+  --muted-strong: #b8c6cb;
+  --primary: #5da2ff;
+  --primary-hover: #7db6ff;
+  --primary-soft: #10223d;
+  --primary-border: #2f5f99;
+  --accent: #f0c766;
+  --accent-soft: #332712;
+  --accent-border: #8a6b20;
+  --danger: #e28f83;
+  --danger-soft: #33211f;
+  --success: #8ec6a5;
+  --focus: #5da2ff;
+}
+
+body {
+  background: var(--page-bg);
+  color: var(--text);
+}
+
+.shell,
+:root[data-theme="dark"] .shell {
+  background: var(--page-gradient), var(--page-bg);
+  grid-template-columns: 236px minmax(0, 1fr);
+}
+
+.page {
+  max-width: 1180px;
+  padding: 46px 56px;
+  width: 100%;
+}
+
+.page-header {
+  margin-bottom: 26px;
+  max-width: 760px;
+}
+
+.eyebrow:empty {
+  display: none;
+}
+
+.eyebrow {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  text-transform: none;
+}
+
+h1 {
+  font-size: 31px;
+  font-weight: 760;
+  letter-spacing: 0;
+  line-height: 1.16;
+}
+
+h2 {
+  font-size: 17px;
+  font-weight: 720;
+  line-height: 1.35;
+}
+
+h3 {
+  font-size: 15px;
+  font-weight: 720;
+  line-height: 1.35;
+}
+
+.lede,
+p {
+  line-height: 1.62;
+}
+
+.sidebar {
+  border-right: 1px solid var(--border);
+  padding: 22px 14px;
+}
+
+.brand {
+  border-bottom: 0;
+  margin-bottom: 18px;
+  padding: 0 8px;
+}
+
+.brand span {
+  font-size: 16px;
+  font-weight: 760;
+}
+
+.brand small {
+  font-size: 11px;
+}
+
+.sidebar-nav {
+  gap: 18px;
+}
+
+.nav-group + .nav-group {
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+}
+
+.nav-group > p {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 760;
+  margin: 0 8px 6px;
+}
+
+.sidebar-nav a {
+  border-radius: 6px;
+  min-height: 38px;
+  padding: 7px 8px;
+}
+
+.sidebar-nav a small {
+  display: none;
+}
+
+.sidebar-nav a span {
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.sidebar-nav a:hover,
+.sidebar-nav a.active {
+  background: var(--primary-soft);
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.sidebar-nav a.active {
+  box-shadow: inset 2px 0 0 var(--primary);
+}
+
+.sidebar-session {
+  border-top: 1px solid var(--border);
+  grid-template-columns: 1fr;
+  padding: 16px 8px 0;
+}
+
+.sidebar-session img {
+  display: none;
+}
+
+.theme-toggle-floating {
+  border-radius: 999px;
+  box-shadow: none;
+  right: 22px;
+  top: 18px;
+}
+
+.metric-card,
+.panel,
+.table-panel,
+.keyword-library-panel,
+.upload-zone,
+.selection-pane,
+.answer-pane,
+.selected-paper-panel,
+.settings-list,
+.empty-state,
+.detail-card,
+.paper-search-panel,
+.result-toolbar,
+.related-keyword-panel,
+.qa-answer,
+.taxonomy-tree,
+.taxonomy-detail,
+.taxonomy-form,
+.docs-filter-panel,
+.docs-command-bar,
+.doc-space-tree,
+.doc-group,
+.document-editor,
+.search-command-panel,
+.experiment-create-panel,
+.experiment-guide-panel,
+.search-empty-state,
+.reading-workflow-panel,
+.experiment-main-panel,
+.experiment-run-panel,
+.experiment-project-row,
+.search-result-row {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: none;
+}
+
+.metric-grid {
+  gap: 10px;
+}
+
+.metric-card {
+  min-height: 104px;
+  padding: 16px;
+}
+
+.metric-card span {
+  margin-bottom: 10px;
+}
+
+.metric-card strong {
+  font-size: 28px;
+  font-weight: 720;
+}
+
+.dashboard-grid {
+  gap: 12px;
+}
+
+.panel,
+.keyword-library-panel {
+  padding: 18px;
+}
+
+.flow-step,
+.health-row,
+.keyword-library-grid article,
+.reading-status-grid div,
+.reading-subpanel,
+.review-action-grid div,
+.review-history div,
+.linked-experiment-list a,
+.experiment-run-row,
+.experiment-protocol-panel {
+  background: var(--surface);
+  border-color: var(--border);
+  border-radius: 6px;
+}
+
+.tag-cloud {
+  gap: 6px;
+}
+
+.tag-cloud span,
+.pill,
+.paper-code,
+.search-result-type {
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--muted-strong);
+  font-size: 12px;
+  font-weight: 620;
+  padding: 5px 8px;
+}
+
+button,
+.primary-button {
+  border-radius: 6px;
+  font-weight: 650;
+  min-height: 38px;
+  padding: 8px 13px;
+}
+
+input,
+select,
+textarea {
+  border-radius: 6px;
+  min-height: 38px;
+  padding: 8px 10px;
+}
+
+textarea {
+  min-height: 104px;
+}
+
+.secondary-button,
+.link-button {
+  background: transparent !important;
+  border: 1px solid var(--border) !important;
+  color: var(--text) !important;
+}
+
+.search-page,
+.experiments-page {
+  max-width: 1050px;
+}
+
+.search-command-panel {
+  gap: 10px;
+  padding: 12px;
+}
+
+.search-command-main {
+  grid-template-columns: minmax(260px, 1fr) 140px auto auto;
+}
+
+.search-command-meta {
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  padding-top: 8px;
+}
+
+.search-results,
+.experiment-project-list {
+  gap: 8px;
+}
+
+.search-result-row {
+  align-items: start;
+  grid-template-columns: 70px minmax(0, 1fr) auto;
+  padding: 14px;
+}
+
+.search-result-row .tag-cloud {
+  grid-column: 2;
+}
+
+.search-result-row > .link-button {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+}
+
+.search-result-content p {
+  color: var(--muted);
+  display: -webkit-box;
+  font-size: 13px;
+  line-height: 1.55;
+  margin: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.search-empty-state {
+  padding: 20px;
+}
+
+.experiments-workbench {
+  display: block;
+  margin-bottom: 14px;
+}
+
+.experiment-create-panel {
+  gap: 10px;
+  padding: 14px;
+}
+
+.experiment-create-panel textarea {
+  min-height: 76px;
+}
+
+.experiment-project-row {
+  padding: 14px;
+}
+
+.experiment-detail-grid {
+  grid-template-columns: minmax(0, 1fr) 320px;
+}
+
+.experiment-main-panel,
+.experiment-run-panel {
+  padding: 16px;
+}
+
+.experiment-run-panel {
+  gap: 12px;
+}
+
+.experiment-run-panel textarea {
+  min-height: 82px;
+}
+
+.reading-workflow-panel {
+  gap: 12px;
+  padding: 16px;
+}
+
+.reading-panel-header,
+.reading-subpanel-title {
+  align-items: center;
+}
+
+.reading-status-grid {
+  gap: 8px;
+}
+
+.reading-status-grid div {
+  padding: 10px;
+}
+
+.reading-subpanel {
+  border: 0;
+  border-top: 1px solid var(--border);
+  gap: 10px;
+  padding-top: 12px;
+}
+
+.reading-plan-grid {
+  grid-template-columns: minmax(0, 1fr) 170px;
+}
+
+.reading-plan-grid textarea {
+  min-height: 74px;
+}
+
+.review-action-grid div {
+  padding: 8px;
+}
+
+.form-message {
+  border-radius: 6px;
+}
+
+@media (max-width: 1180px) {
+  .page {
+    padding: 34px 28px;
+  }
+
+  .search-command-main,
+  .search-result-row,
+  .experiment-detail-grid,
+  .reading-plan-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .search-result-row .tag-cloud,
+  .search-result-row > .link-button {
+    grid-column: auto;
+    grid-row: auto;
+  }
+}
+
+@media (max-width: 920px) {
+  .shell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    height: auto;
+    position: static;
+  }
+
+  .sidebar-nav {
+    grid-template-columns: 1fr;
+  }
+
+  .metric-grid,
+  .dashboard-grid,
+  .reading-status-grid,
+  .review-input-row,
+  .review-action-grid {
+    grid-template-columns: 1fr;
+  }
+}

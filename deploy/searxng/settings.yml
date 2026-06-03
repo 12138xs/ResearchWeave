@@ -1,0 +1,20 @@
+use_default_settings: true
+
+general:
+  debug: false
+  instance_name: "A510 Knowledge Search"
+
+search:
+  formats:
+    - html
+    - json
+
+server:
+  bind_address: "0.0.0.0"
+  port: 8080
+  secret_key: "change-me-on-server"
+  limiter: false
+  image_proxy: false
+
+outgoing:
+  request_timeout: 5.0

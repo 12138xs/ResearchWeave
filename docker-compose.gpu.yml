@@ -1,0 +1,11 @@
+# Optional GPU override. Do not enable until hardware, driver, container
+# runtime, and team permission are confirmed.
+services:
+  worker-heavy:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]

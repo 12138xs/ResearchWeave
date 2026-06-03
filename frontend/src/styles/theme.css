@@ -1,0 +1,629 @@
+/* Final theme layer: dark is the product default. */
+:root,
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --page-bg: #0d1113;
+  --page-gradient:
+    linear-gradient(180deg, rgba(19, 25, 28, 0.96) 0%, rgba(13, 17, 19, 1) 100%);
+  --surface: #151a1d;
+  --surface-strong: #111619;
+  --surface-muted: #1d2428;
+  --sidebar-bg: #0b0f11;
+  --border: #263239;
+  --border-strong: #3a4850;
+  --text: #d5dee2;
+  --text-strong: #f4f7f7;
+  --muted: #8d9ca2;
+  --muted-strong: #b8c6cb;
+  --primary: #5da2ff;
+  --primary-hover: #7db6ff;
+  --primary-soft: #10223d;
+  --primary-border: #2f5f99;
+  --accent: #f0c766;
+  --accent-soft: #332712;
+  --accent-border: #8a6b20;
+  --danger: #ff9b8c;
+  --danger-soft: #341d1b;
+  --warning: #f0c766;
+  --warning-soft: #332712;
+  --success: #83d9aa;
+  --success-soft: #173020;
+  --focus: #5da2ff;
+  --panel-sheen:
+    radial-gradient(circle at 92% 0%, color-mix(in srgb, var(--primary) 12%, transparent) 0%, transparent 34%),
+    radial-gradient(circle at 6% 100%, color-mix(in srgb, var(--accent) 8%, transparent) 0%, transparent 30%),
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-muted) 46%, transparent) 0%, var(--surface) 100%);
+  --panel-sheen-strong:
+    radial-gradient(circle at 88% 0%, color-mix(in srgb, var(--primary) 18%, transparent) 0%, transparent 36%),
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-muted) 62%, transparent) 0%, var(--surface) 100%);
+  --accent-sheen:
+    radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--accent) 16%, transparent) 0%, transparent 32%),
+    linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 46%, transparent) 0%, var(--surface) 100%);
+  --shadow-soft: 0 16px 42px rgba(0, 0, 0, 0.26);
+  --shadow-floating: 0 22px 60px rgba(0, 0, 0, 0.34);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --page-bg: #f7f8f8;
+  --page-gradient: linear-gradient(180deg, #fbfbfa 0%, #f5f6f6 100%);
+  --surface: #ffffff;
+  --surface-strong: #ffffff;
+  --surface-muted: #f1f3f3;
+  --sidebar-bg: #fbfbfa;
+  --border: #e1e4e4;
+  --border-strong: #c8cece;
+  --text: #202727;
+  --text-strong: #101616;
+  --muted: #687273;
+  --muted-strong: #404a4b;
+  --primary: #1f5f9e;
+  --primary-hover: #174b80;
+  --primary-soft: #e6f0ff;
+  --primary-border: #8fb3e6;
+  --accent: #9a6a13;
+  --accent-soft: #fff4d6;
+  --accent-border: #d9b354;
+  --danger: #a33f34;
+  --danger-soft: #fff6f4;
+  --warning: #9a6a13;
+  --warning-soft: #fff4d6;
+  --success: #2f6f4f;
+  --success-soft: #eef8f2;
+  --focus: #1f5f9e;
+  --panel-sheen:
+    radial-gradient(circle at 92% 0%, color-mix(in srgb, var(--primary) 8%, transparent) 0%, transparent 34%),
+    radial-gradient(circle at 6% 100%, color-mix(in srgb, var(--accent) 7%, transparent) 0%, transparent 30%),
+    linear-gradient(180deg, var(--surface) 0%, var(--surface-muted) 100%);
+  --panel-sheen-strong:
+    radial-gradient(circle at 88% 0%, color-mix(in srgb, var(--primary) 12%, transparent) 0%, transparent 36%),
+    linear-gradient(180deg, var(--surface) 0%, var(--surface-muted) 100%);
+  --accent-sheen:
+    radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--accent) 12%, transparent) 0%, transparent 32%),
+    linear-gradient(180deg, var(--accent-soft) 0%, var(--surface) 100%);
+  --shadow-soft: 0 12px 32px color-mix(in srgb, var(--text-strong) 8%, transparent);
+  --shadow-floating: 0 18px 48px color-mix(in srgb, var(--text-strong) 10%, transparent);
+}
+
+body,
+.shell,
+.page,
+.login-page {
+  background: var(--page-gradient), var(--page-bg);
+  color: var(--text);
+}
+
+html {
+  scrollbar-color: var(--border-strong) var(--page-bg);
+}
+
+.sidebar {
+  background:
+    radial-gradient(circle at 0% 12%, color-mix(in srgb, var(--accent) 12%, transparent) 0%, transparent 28%),
+    radial-gradient(circle at 100% 48%, color-mix(in srgb, var(--primary) 10%, transparent) 0%, transparent 34%),
+    linear-gradient(180deg, color-mix(in srgb, var(--sidebar-bg) 84%, var(--accent-soft)) 0%, var(--sidebar-bg) 100%);
+  border-color: var(--border);
+}
+
+.nav-group > p,
+.sidebar-nav a {
+  color: color-mix(in srgb, var(--accent) 82%, var(--muted-strong)) !important;
+}
+
+.sidebar-nav a span {
+  color: var(--accent);
+  text-shadow: 0 0 18px color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.sidebar-nav a:hover span,
+.sidebar-nav a.active span {
+  color: color-mix(in srgb, var(--accent) 92%, var(--text-strong));
+}
+
+.brand span,
+h1,
+h2,
+h3,
+h4,
+.paper-title-link,
+.section-heading h2,
+.metric-card strong,
+.reading-status-grid strong,
+.taxonomy-tree-list span,
+.doc-space-node span {
+  color: var(--text-strong);
+}
+
+.brand small,
+.eyebrow,
+.lede,
+.page-header p,
+p,
+.muted,
+.muted-inline,
+.row-card p,
+.taxonomy-muted,
+.search-command-meta,
+.experiment-toolbar span,
+.reading-panel-copy,
+label > span {
+  color: var(--muted);
+}
+
+a,
+:root[data-theme="dark"] a,
+:root[data-theme="dark"] .paper-title-link {
+  color: var(--primary);
+}
+
+a:hover,
+:root[data-theme="dark"] a:hover,
+:root[data-theme="dark"] .paper-title-link:hover {
+  color: var(--primary-hover);
+}
+
+button,
+.primary-button {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--page-bg);
+}
+
+button:hover,
+.primary-button:hover {
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
+  color: var(--page-bg);
+}
+
+button:disabled,
+.primary-button:disabled,
+.secondary-button:disabled,
+.link-button:disabled {
+  background: var(--surface-muted) !important;
+  border-color: var(--border) !important;
+  color: color-mix(in srgb, var(--muted) 62%, transparent) !important;
+  cursor: not-allowed;
+}
+
+.secondary-button,
+.link-button,
+.editor-mode-tabs button,
+.segmented button,
+.segmented-control button,
+.detail-tabs button,
+.year-strip button,
+.tag-button {
+  background: transparent !important;
+  border-color: var(--border) !important;
+  color: var(--muted-strong) !important;
+}
+
+.secondary-button:hover,
+.link-button:hover,
+.editor-mode-tabs button:hover,
+.segmented button:hover,
+.segmented-control button:hover,
+.detail-tabs button:hover,
+.year-strip button:hover,
+.tag-button:hover {
+  background: var(--surface-muted) !important;
+  border-color: var(--border-strong) !important;
+  color: var(--text-strong) !important;
+}
+
+.sidebar-nav a:hover,
+.sidebar-nav a.active,
+.docs-page .doc-space-node button:hover,
+.docs-page .doc-space-node button.active,
+.taxonomy-page .taxonomy-tree-list button:hover,
+.taxonomy-page .taxonomy-tree-list button.active {
+  background: var(--primary-soft) !important;
+  border-color: var(--primary-border) !important;
+  color: var(--text-strong) !important;
+}
+
+.sidebar-nav a.active {
+  box-shadow:
+    inset 2px 0 0 var(--accent),
+    0 0 0 1px color-mix(in srgb, var(--primary) 14%, transparent),
+    0 10px 28px color-mix(in srgb, var(--primary) 10%, transparent);
+}
+
+.editor-mode-tabs button.active,
+.segmented button.active,
+.segmented-control button.active,
+.detail-tabs button.active,
+.year-strip button.active,
+.tag-button.active {
+  background: var(--primary) !important;
+  border-color: var(--primary) !important;
+  color: var(--page-bg) !important;
+}
+
+.theme-toggle-floating {
+  background: var(--surface);
+  border-color: var(--border);
+  box-shadow: var(--shadow-floating);
+  bottom: auto;
+  right: var(--space-4);
+  top: var(--space-4);
+}
+
+.theme-toggle-floating > button,
+.theme-toggle-floating > button:hover {
+  background: transparent !important;
+  color: var(--muted) !important;
+}
+
+.theme-toggle-floating > button.active,
+.theme-toggle-floating > button.active:hover {
+  background: var(--primary) !important;
+  color: var(--page-bg) !important;
+}
+
+input,
+select,
+textarea,
+:root[data-theme="dark"] input,
+:root[data-theme="dark"] select,
+:root[data-theme="dark"] textarea {
+  background: var(--surface-strong) !important;
+  border-color: var(--border) !important;
+  color: var(--text-strong) !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: color-mix(in srgb, var(--muted) 78%, transparent);
+}
+
+input[type="file"]::file-selector-button {
+  background: var(--surface-muted);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  color: var(--text-strong);
+  cursor: pointer;
+  margin-right: 12px;
+  padding: 8px 12px;
+}
+
+input[type="file"]::file-selector-button:hover {
+  background: var(--primary-soft);
+  border-color: var(--primary-border);
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+button:focus-visible,
+a:focus-visible {
+  border-color: var(--focus) !important;
+  outline: 2px solid color-mix(in srgb, var(--focus) 42%, transparent);
+  outline-offset: 2px;
+}
+
+.metric-card,
+.panel,
+.table-panel,
+.keyword-library-panel,
+.upload-zone,
+.selection-pane,
+.answer-pane,
+.selected-paper-panel,
+.settings-list,
+.empty-state,
+.detail-card,
+.paper-search-panel,
+.result-toolbar,
+.related-keyword-panel,
+.qa-answer,
+.taxonomy-tree,
+.taxonomy-detail,
+.taxonomy-form,
+.docs-filter-panel,
+.docs-command-bar,
+.doc-space-tree,
+.doc-group,
+.document-editor,
+.search-command-panel,
+.experiment-create-panel,
+.experiment-guide-panel,
+.search-empty-state,
+.reading-workflow-panel,
+.experiment-main-panel,
+.experiment-run-panel,
+.experiment-project-row,
+.search-result-row,
+.login-panel,
+.markdown-preview-panel,
+.doc-viewer,
+.doc-editor-main,
+.doc-editor-side,
+.row-card,
+.qa-paper-item,
+.version-row,
+.metadata-candidate,
+.reading-note-card,
+.doc-space-node button,
+.keyword-library-grid article,
+.flow-step,
+.health-row,
+.metadata-suggestion,
+.quality-score-panel,
+.export-group,
+.selected-paper-chip,
+.mini-tags span,
+.detail-tags > span:not(.pill),
+.paper-code,
+.math-block,
+.doc-image-uploader,
+.space-create-box,
+.uploaded-image-list div {
+  background: var(--panel-sheen) !important;
+  border-color: var(--border) !important;
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--text-strong) 4%, transparent),
+    0 16px 42px color-mix(in srgb, var(--page-bg) 34%, transparent) !important;
+  color: var(--text);
+}
+
+.docs-filter-panel,
+.search-command-panel,
+.paper-search-panel,
+.result-toolbar,
+.experiment-create-panel,
+.document-editor,
+.doc-editor-main,
+.doc-viewer,
+.reading-workflow-panel {
+  background: var(--panel-sheen-strong) !important;
+  border-color: color-mix(in srgb, var(--primary-border) 48%, var(--border)) !important;
+}
+
+.keyword-library-panel,
+.related-keyword-panel,
+.taxonomy-tree,
+.taxonomy-form,
+.doc-space-tree,
+.quality-score-panel,
+.review-action-card {
+  background: var(--accent-sheen) !important;
+  border-color: color-mix(in srgb, var(--accent-border) 52%, var(--border)) !important;
+}
+
+.taxonomy-detail,
+.doc-group,
+.search-result-row,
+.experiment-project-row,
+.row-card,
+.qa-paper-item {
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--primary) 8%, transparent) 0%, transparent 38%),
+    var(--panel-sheen) !important;
+}
+
+.panel::before,
+.detail-card::before,
+.doc-group::before,
+.search-result-row::before,
+.row-card::before,
+.document-editor::before,
+.taxonomy-tree::before,
+.taxonomy-detail::before,
+.taxonomy-form::before {
+  background: linear-gradient(90deg, var(--primary), var(--accent));
+  border-radius: inherit;
+  content: "";
+  display: block;
+  height: 1px;
+  inset: 0 0 auto;
+  opacity: 0.44;
+  position: absolute;
+}
+
+.panel,
+.detail-card,
+.doc-group,
+.search-result-row,
+.row-card,
+.document-editor,
+.taxonomy-tree,
+.taxonomy-detail,
+.taxonomy-form {
+  overflow: hidden;
+  position: relative;
+}
+
+.source-preview,
+.code-block,
+.diagram-block,
+.markdown-renderer pre,
+.doc-viewer pre {
+  background: #0b0f11 !important;
+  border-color: var(--border) !important;
+  color: #dce8ea !important;
+}
+
+.tag-cloud span,
+.pill,
+.paper-code,
+.search-result-type,
+.mini-tags span,
+.detail-tags > span:not(.pill) {
+  background: color-mix(in srgb, var(--accent-soft) 58%, var(--surface-muted)) !important;
+  border-color: color-mix(in srgb, var(--accent-border) 42%, var(--border)) !important;
+  color: color-mix(in srgb, var(--accent) 88%, var(--text-strong)) !important;
+}
+
+:root[data-theme="dark"] .tag-cloud span,
+:root[data-theme="dark"] .mini-tags span,
+:root[data-theme="dark"] .detail-tags > span:not(.pill),
+:root[data-theme="dark"] .paper-code,
+:root[data-theme="dark"] .search-result-type,
+:root[data-theme="light"] .tag-cloud span,
+:root[data-theme="light"] .mini-tags span,
+:root[data-theme="light"] .detail-tags > span:not(.pill),
+:root[data-theme="light"] .paper-code,
+:root[data-theme="light"] .search-result-type {
+  background: color-mix(in srgb, var(--accent-soft) 58%, var(--surface-muted)) !important;
+  border-color: color-mix(in srgb, var(--accent-border) 42%, var(--border)) !important;
+  color: color-mix(in srgb, var(--accent) 88%, var(--text-strong)) !important;
+}
+
+.keyword-library-grid strong,
+.keyword-library-grid span,
+.keyword-library-grid p,
+.tag-button,
+.tag-button small,
+.selected-keyword-strip button,
+.keyword-suggestion-row .tag-button {
+  color: color-mix(in srgb, var(--accent) 84%, var(--text-strong)) !important;
+}
+
+:root[data-theme="dark"] .keyword-library-grid strong,
+:root[data-theme="dark"] .keyword-library-grid span,
+:root[data-theme="dark"] .keyword-library-grid p,
+:root[data-theme="dark"] .tag-button,
+:root[data-theme="dark"] .tag-button small,
+:root[data-theme="dark"] .selected-keyword-strip button,
+:root[data-theme="dark"] .keyword-suggestion-row .tag-button,
+:root[data-theme="light"] .keyword-library-grid strong,
+:root[data-theme="light"] .keyword-library-grid span,
+:root[data-theme="light"] .keyword-library-grid p,
+:root[data-theme="light"] .tag-button,
+:root[data-theme="light"] .tag-button small,
+:root[data-theme="light"] .selected-keyword-strip button,
+:root[data-theme="light"] .keyword-suggestion-row .tag-button {
+  color: color-mix(in srgb, var(--accent) 84%, var(--text-strong)) !important;
+}
+
+:root[data-theme="dark"] .docs-filter-panel,
+:root[data-theme="dark"] .search-command-panel,
+:root[data-theme="dark"] .paper-search-panel,
+:root[data-theme="dark"] .result-toolbar,
+:root[data-theme="dark"] .experiment-create-panel,
+:root[data-theme="dark"] .document-editor,
+:root[data-theme="dark"] .doc-editor-main,
+:root[data-theme="dark"] .doc-viewer,
+:root[data-theme="dark"] .reading-workflow-panel,
+:root[data-theme="light"] .docs-filter-panel,
+:root[data-theme="light"] .search-command-panel,
+:root[data-theme="light"] .paper-search-panel,
+:root[data-theme="light"] .result-toolbar,
+:root[data-theme="light"] .experiment-create-panel,
+:root[data-theme="light"] .document-editor,
+:root[data-theme="light"] .doc-editor-main,
+:root[data-theme="light"] .doc-viewer,
+:root[data-theme="light"] .reading-workflow-panel {
+  background: var(--panel-sheen-strong) !important;
+  border-color: color-mix(in srgb, var(--primary-border) 48%, var(--border)) !important;
+}
+
+:root[data-theme="dark"] .keyword-library-panel,
+:root[data-theme="dark"] .related-keyword-panel,
+:root[data-theme="dark"] .taxonomy-tree,
+:root[data-theme="dark"] .taxonomy-form,
+:root[data-theme="dark"] .doc-space-tree,
+:root[data-theme="dark"] .quality-score-panel,
+:root[data-theme="dark"] .review-action-card,
+:root[data-theme="light"] .keyword-library-panel,
+:root[data-theme="light"] .related-keyword-panel,
+:root[data-theme="light"] .taxonomy-tree,
+:root[data-theme="light"] .taxonomy-form,
+:root[data-theme="light"] .doc-space-tree,
+:root[data-theme="light"] .quality-score-panel,
+:root[data-theme="light"] .review-action-card {
+  background: var(--accent-sheen) !important;
+  border-color: color-mix(in srgb, var(--accent-border) 52%, var(--border)) !important;
+}
+
+.pill-success,
+.pill-ok,
+.pill-light_ready,
+.pill-deep_ready,
+:root[data-theme="dark"] .pill-success,
+:root[data-theme="dark"] .pill-ok,
+:root[data-theme="dark"] .pill-light_ready,
+:root[data-theme="dark"] .pill-deep_ready {
+  background: color-mix(in srgb, var(--success) 16%, var(--surface-muted)) !important;
+  border-color: color-mix(in srgb, var(--success) 38%, var(--border)) !important;
+  color: var(--success) !important;
+}
+
+.pill-degraded,
+.pill-pending,
+.pill-running,
+.pill-uploaded,
+.pill-light_processing,
+.pill-deep_processing,
+:root[data-theme="dark"] .pill-degraded,
+:root[data-theme="dark"] .pill-pending,
+:root[data-theme="dark"] .pill-running,
+:root[data-theme="dark"] .pill-uploaded,
+:root[data-theme="dark"] .pill-light_processing,
+:root[data-theme="dark"] .pill-deep_processing {
+  background: color-mix(in srgb, var(--warning) 16%, var(--surface-muted)) !important;
+  border-color: color-mix(in srgb, var(--warning) 36%, var(--border)) !important;
+  color: var(--warning) !important;
+}
+
+mark,
+.search-highlight,
+.matched-term,
+.review-action-card,
+.pill-needs_review,
+:root[data-theme="dark"] mark,
+:root[data-theme="dark"] .search-highlight,
+:root[data-theme="dark"] .matched-term,
+:root[data-theme="dark"] .review-action-card,
+:root[data-theme="dark"] .pill-needs_review {
+  background: color-mix(in srgb, var(--accent) 18%, var(--surface-muted)) !important;
+  border-color: color-mix(in srgb, var(--accent-border) 64%, var(--border)) !important;
+  color: var(--accent) !important;
+}
+
+.danger-button,
+.form-message-error {
+  background: var(--danger-soft) !important;
+  border-color: color-mix(in srgb, var(--danger) 42%, var(--border)) !important;
+  color: var(--danger) !important;
+}
+
+.form-message {
+  background: var(--success-soft);
+  border-color: color-mix(in srgb, var(--success) 38%, var(--border));
+  color: var(--success);
+}
+
+.markdown-renderer code {
+  background: var(--surface-muted) !important;
+  color: var(--accent) !important;
+}
+
+.markdown-renderer blockquote,
+.markdown-renderer table,
+.markdown-renderer th,
+.markdown-renderer td {
+  border-color: var(--border) !important;
+}
+
+.markdown-renderer th {
+  background: var(--surface-muted) !important;
+}
+
+hr,
+.reading-status-row,
+.detail-section,
+.metadata-section,
+.task-row,
+.quality-issue-row {
+  border-color: var(--border) !important;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--primary) 28%, transparent);
+  color: var(--text-strong);
+}

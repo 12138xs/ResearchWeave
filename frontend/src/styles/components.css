@@ -1,0 +1,225 @@
+button,
+.primary-button,
+.secondary-button,
+.link-button {
+  align-items: center;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: inline-flex;
+  font-weight: 600;
+  gap: var(--space-2);
+  justify-content: center;
+  line-height: 1.2;
+  min-height: 40px;
+  min-width: 0;
+  padding: var(--space-2) var(--space-3);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+button,
+.primary-button {
+  background: var(--primary);
+  border: 1px solid var(--primary);
+  color: var(--page-bg);
+}
+
+button:hover,
+.primary-button:hover {
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
+  color: var(--page-bg);
+}
+
+button:disabled,
+.primary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.56;
+}
+
+.secondary-button,
+.link-button {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-strong);
+}
+
+.secondary-button:hover,
+.link-button:hover {
+  background: var(--surface-muted);
+  border-color: var(--border-strong);
+  color: var(--text-strong);
+}
+
+input,
+select,
+textarea {
+  background: var(--surface-strong);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  min-height: 40px;
+  padding: var(--space-2) var(--space-3);
+  width: 100%;
+}
+
+textarea {
+  line-height: 1.55;
+  min-height: 112px;
+  resize: vertical;
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--focus) 70%, transparent);
+  outline-offset: 2px;
+}
+
+label {
+  color: var(--muted-strong);
+  display: grid;
+  font-size: var(--font-meta);
+  font-weight: 620;
+  gap: var(--space-2);
+}
+
+label > span {
+  color: var(--muted);
+}
+
+.metric-card,
+.panel,
+.table-panel,
+.keyword-library-panel,
+.upload-zone,
+.selection-pane,
+.answer-pane,
+.selected-paper-panel,
+.settings-list,
+.empty-state,
+.detail-card,
+.paper-search-panel,
+.result-toolbar,
+.related-keyword-panel,
+.qa-answer,
+.taxonomy-tree,
+.taxonomy-detail,
+.taxonomy-form,
+.docs-filter-panel,
+.docs-command-bar,
+.doc-space-tree,
+.doc-group,
+.document-editor,
+.search-command-panel,
+.experiment-create-panel,
+.experiment-guide-panel,
+.search-empty-state,
+.reading-workflow-panel,
+.experiment-main-panel,
+.experiment-run-panel,
+.experiment-project-row,
+.search-result-row {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: none;
+  color: var(--text);
+}
+
+.panel,
+.keyword-library-panel,
+.detail-card,
+.experiment-main-panel,
+.experiment-run-panel,
+.reading-workflow-panel {
+  padding: var(--space-4);
+}
+
+.card-header,
+.panel-title,
+.reading-panel-header,
+.reading-subpanel-title {
+  align-items: start;
+  display: flex;
+  gap: var(--space-3);
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.card-header h2,
+.panel-title h2,
+.reading-panel-header h2,
+.reading-subpanel-title h3 {
+  margin-bottom: 0;
+}
+
+.tag-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.tag-cloud span,
+.pill,
+.paper-code,
+.search-result-type {
+  align-items: center;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--muted-strong);
+  display: inline-flex;
+  font-size: var(--font-meta);
+  font-weight: 560;
+  line-height: 1.2;
+  min-height: 28px;
+  padding: var(--space-1) var(--space-2);
+  white-space: nowrap;
+}
+
+.form-message {
+  background: var(--success-soft);
+  border: 1px solid color-mix(in srgb, var(--success) 34%, var(--border));
+  border-radius: var(--radius-sm);
+  color: var(--success);
+  font-size: var(--font-small);
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.error-text {
+  color: var(--danger);
+}
+
+.inline-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.empty-state,
+.search-empty-state {
+  padding: var(--space-5);
+}
+
+.source-preview,
+.code-block,
+.diagram-block {
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: var(--font-small);
+  line-height: 1.6;
+  overflow-x: auto;
+  padding: var(--space-3);
+  white-space: pre-wrap;
+}

@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  repository-boundary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify GitHub repository boundary
+        run: |
+          test ! -e AGENTS.md
+          test ! -d scripts
+          test ! -d tools
+          test ! -d docs/repository
+          test ! -d docs/superpowers
+          test ! -d docs/ui-review
+          test ! -d secrets
+          test ! -d storage
+          test ! -d backups
+          test ! -e .env
+          test ! -e current-release.json
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+        working-directory: frontend
+      - run: npm run build
+        working-directory: frontend
+
+  backend-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+        working-directory: backend
+      - run: python manage.py test config.tests.test_release_info
+        working-directory: backend

@@ -1,0 +1,114 @@
+services:
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - "30888:80"
+    volumes:
+      - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./frontend/dist:/usr/share/nginx/html:ro
+    depends_on:
+      - web
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./backend
+    env_file:
+      - .env
+    volumes:
+      - ./storage:/app/storage
+    depends_on:
+      - postgres
+      - redis
+      - searxng
+    restart: unless-stopped
+
+  worker-fast:
+    build:
+      context: ./backend
+    command: celery -A config worker -Q fast_q --concurrency=2 --loglevel=INFO
+    env_file:
+      - .env
+    volumes:
+      - ./storage:/app/storage
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+
+  worker-ai:
+    build:
+      context: ./backend
+    command: celery -A config worker -Q ai_q --concurrency=1 --loglevel=INFO
+    env_file:
+      - .env
+    volumes:
+      - ./storage:/app/storage
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+
+  worker-heavy:
+    build:
+      context: ./backend
+    command: celery -A config worker -Q heavy_q --concurrency=1 --prefetch-multiplier=1 --loglevel=INFO
+    env_file:
+      - .env
+    volumes:
+      - ./storage:/app/storage
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+
+  beat:
+    build:
+      context: ./backend
+    command: celery -A config beat --loglevel=INFO
+    env_file:
+      - .env
+    volumes:
+      - ./storage:/app/storage
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+
+  postgres:
+    image: pgvector/pgvector:0.8.2-pg17-bookworm
+    env_file:
+      - .env
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.4-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+
+  searxng:
+    image: searxng/searxng:latest
+    volumes:
+      - ./deploy/searxng/settings.yml:/etc/searxng/settings.yml:ro
+    expose:
+      - "8080"
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  redis-data:
+
+networks:
+  default:
+    name: research_os_safe_default
+    ipam:
+      config:
+        # Never let Docker auto-select a subnet on this public lab server.
+        # 2026-05-11 incident: auto allocation picked 172.19.0.0/16,
+        # overlapping lab clients and breaking SSH replies to that subnet.
+        - subnet: 10.89.0.0/24
+          gateway: 10.89.0.1

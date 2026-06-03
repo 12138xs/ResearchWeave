@@ -1,0 +1,7 @@
+{
+  "product": "A510知识库",
+  "version": "v0.4.4",
+  "released_at": "2026-06-02",
+  "summary": "完成深色默认主题与蓝金视觉体系：侧边栏金色高亮、右上角色系切换、关键词可读性修复、蓝/金高亮规范和核心文档同步。",
+  "migration_state": "assistant.0001, papers.0006, experiments.0001, quality.0001, research_map.0001, search.0002"
+}
