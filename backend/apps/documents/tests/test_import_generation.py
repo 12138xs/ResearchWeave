@@ -4,6 +4,7 @@ import socket
 from types import SimpleNamespace
 from unittest.mock import patch
 
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 
 from apps.documents.importing import (
@@ -109,6 +110,10 @@ class ImportGenerationHelperTests(TestCase):
 
 
 class DocumentImportBatchEnqueueTests(TestCase):
+    def setUp(self) -> None:
+        get_user_model().objects.create_user(username="member", password="member-password")
+        self.client.login(username="member", password="member-password")
+
     @patch("apps.documents.views.generate_document_import_candidates.delay")
     def test_enqueue_endpoint_marks_batch_queued_and_delays_task(self, mocked_delay) -> None:
         batch = DocumentImportBatch.objects.create(

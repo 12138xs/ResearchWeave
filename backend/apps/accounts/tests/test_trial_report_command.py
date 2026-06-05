@@ -55,7 +55,7 @@ class TrialReportCommandTests(TestCase):
         self.assertIn("- [ ] 上传一篇非敏感 PDF", content)
         self.assertIn("- [ ] 完成当前论文问答", content)
         self.assertIn("- [ ] 核对备份恢复证据", content)
-        self.assertIn("Do not stop or delete old LAB Wiki services without explicit user approval.", content)
+        self.assertIn("旧 LAB Wiki / Wiki.js / Dify / old portal 栈已退役", content)
         self.assertNotIn("secret", content)
 
     def test_can_write_trial_report_to_stdout(self) -> None:
@@ -65,7 +65,7 @@ class TrialReportCommandTests(TestCase):
 
         content = out.getvalue()
         self.assertIn("# Research OS Trial Readiness Report", content)
-        self.assertIn("Do not stop or delete old LAB Wiki services without explicit user approval.", content)
+        self.assertIn("旧 LAB Wiki / Wiki.js / Dify / old portal 栈已退役", content)
 
     def test_reports_member_account_readiness_when_usernames_are_provided(self) -> None:
         User = get_user_model()

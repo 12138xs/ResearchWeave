@@ -9,7 +9,10 @@ class AuthApiTests(TestCase):
         response = self.client.get("/api/me/")
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), {"authenticated": False, "user": None})
+        payload = response.json()
+        self.assertEqual(payload["authenticated"], False)
+        self.assertIsNone(payload["user"])
+        self.assertIn("csrf_token", payload)
 
     def test_login_creates_session_and_me_reports_user(self) -> None:
         user = get_user_model().objects.create_user(

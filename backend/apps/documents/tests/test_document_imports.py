@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from unittest.mock import patch
+
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 
 from apps.documents.models import (
@@ -13,7 +16,13 @@ from apps.library.models import KnowledgeSpace
 
 
 class DocumentImportTests(TestCase):
-    def test_create_import_batch_with_url_sources(self) -> None:
+    def setUp(self) -> None:
+        get_user_model().objects.create_user(username="member", password="member-password")
+        self.client.login(username="member", password="member-password")
+
+    @patch("apps.documents.importing.socket.getaddrinfo")
+    def test_create_import_batch_with_url_sources(self, mocked_getaddrinfo) -> None:
+        mocked_getaddrinfo.return_value = [(None, None, None, "", ("93.184.216.34", None))]
         space = KnowledgeSpace.objects.create(name="Linux", kind=KnowledgeSpace.Kind.DOCS)
 
         response = self.client.post(

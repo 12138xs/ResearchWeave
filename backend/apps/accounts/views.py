@@ -3,7 +3,7 @@ from __future__ import annotations
 from django.contrib.auth import authenticate, login, logout
 from django.middleware.csrf import get_token
 from django.utils.decorators import method_decorator
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_protect
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -20,7 +20,7 @@ class MeView(APIView):
         return Response(payload)
 
 
-@method_decorator(csrf_exempt, name="dispatch")
+@method_decorator(csrf_protect, name="dispatch")
 class LoginView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = []
@@ -44,7 +44,7 @@ class LoginView(APIView):
         return Response(payload)
 
 
-@method_decorator(csrf_exempt, name="dispatch")
+@method_decorator(csrf_protect, name="dispatch")
 class LogoutView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = []

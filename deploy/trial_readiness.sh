@@ -44,7 +44,7 @@ else
 fi
 
 echo "== Trial Readiness: Report =="
-report_dir="$ROOT/docs/operations/trial-reports"
+report_dir="${RESEARCH_OS_TRIAL_REPORT_DIR:-$ROOT/storage/reports/trial-readiness}"
 mkdir -p "$report_dir"
 report_path="$report_dir/trial-readiness-$(date +%Y%m%d_%H%M%S).md"
 docker compose exec -T web python manage.py generate_trial_report \

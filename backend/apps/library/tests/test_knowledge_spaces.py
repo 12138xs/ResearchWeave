@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from io import StringIO
 
+from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.test import TestCase
 
@@ -10,6 +11,10 @@ from apps.library.models import KnowledgeSpace
 
 
 class KnowledgeSpaceApiTests(TestCase):
+    def setUp(self) -> None:
+        get_user_model().objects.create_user(username="member", password="member-password")
+        self.client.login(username="member", password="member-password")
+
     def test_knowledge_space_path_and_descendants(self) -> None:
         root = KnowledgeSpace.objects.create(name="Deep Learning", kind="docs", order=1)
         child = KnowledgeSpace.objects.create(name="Transformer", kind="docs", parent=root, order=1)

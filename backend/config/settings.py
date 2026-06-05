@@ -2,8 +2,65 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from urllib.parse import urlsplit
+
+from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parents[1]
+
+
+PLACEHOLDER_VALUES = {
+    "",
+    "*",
+    "change-me",
+    "dev-only-change-me",
+    "example.internal",
+    "localhost",
+    "password",
+    "replace-with-a-long-random-django-secret-key",
+    "replace-with-a-strong-database-password",
+    "secret",
+}
+
+
+def _split_env_list(value: str) -> list[str]:
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+
+def _is_placeholder(value: str | None) -> bool:
+    normalized = str(value or "").strip().lower()
+    return normalized in PLACEHOLDER_VALUES or normalized.startswith("replace-with-")
+
+
+def _has_placeholder(values: list[str]) -> bool:
+    return any(_is_placeholder(value) for value in values)
+
+
+def _is_placeholder_url(value: str | None) -> bool:
+    value = str(value or "").strip()
+    if _is_placeholder(value):
+        return True
+    parsed = urlsplit(value)
+    return _is_placeholder(parsed.hostname or "")
+
+
+def validate_production_settings(env=os.environ) -> None:
+    if env.get("RESEARCH_OS_ENV", "development") != "production":
+        return
+
+    if _is_placeholder(env.get("SECRET_KEY")) or len(str(env.get("SECRET_KEY", ""))) < 24:
+        raise ImproperlyConfigured("SECRET_KEY must be explicitly configured for production.")
+    if _is_placeholder(env.get("POSTGRES_PASSWORD")):
+        raise ImproperlyConfigured("POSTGRES_PASSWORD must be explicitly configured for production.")
+    allowed_hosts = _split_env_list(env.get("ALLOWED_HOSTS", ""))
+    if not allowed_hosts or _has_placeholder(allowed_hosts):
+        raise ImproperlyConfigured("ALLOWED_HOSTS must list explicit production hosts.")
+    csrf_trusted_origins = _split_env_list(env.get("CSRF_TRUSTED_ORIGINS", ""))
+    if not csrf_trusted_origins or any(_is_placeholder_url(value) for value in csrf_trusted_origins):
+        raise ImproperlyConfigured("CSRF_TRUSTED_ORIGINS must be configured for production.")
+    public_base_url = str(env.get("PUBLIC_BASE_URL", "")).strip()
+    if _is_placeholder_url(public_base_url) or public_base_url == "http://localhost:30888":
+        raise ImproperlyConfigured("PUBLIC_BASE_URL must be configured for production.")
 
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-only-change-me")
 DEBUG = os.getenv("RESEARCH_OS_ENV", "development") != "production"
@@ -18,6 +75,8 @@ CSRF_TRUSTED_ORIGINS = [
     for item in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",")
     if item.strip()
 ]
+
+validate_production_settings()
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -115,7 +174,7 @@ PAPER_UPLOAD_ALLOWED_CIDRS = [
     item.strip()
     for item in os.getenv(
         "PAPER_UPLOAD_ALLOWED_CIDRS",
-        "127.0.0.1/32,10.89.0.0/24,172.18.0.0/16,172.19.0.0/16",
+        "127.0.0.1/32,10.89.0.0/24",
     ).split(",")
     if item.strip()
 ]

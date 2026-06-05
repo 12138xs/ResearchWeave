@@ -18,5 +18,5 @@ docker compose exec -T redis redis-cli ping
 docker compose exec -T web celery -A config inspect ping --timeout=10
 
 echo "== Compose =="
-docker compose config >/tmp/research_os_compose_config_check.yml
+docker compose config >/dev/null
 echo "OK: compose config"

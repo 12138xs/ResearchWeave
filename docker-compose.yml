@@ -107,8 +107,7 @@ networks:
     name: research_os_safe_default
     ipam:
       config:
-        # Never let Docker auto-select a subnet on this public lab server.
-        # 2026-05-11 incident: auto allocation picked 172.19.0.0/16,
-        # overlapping lab clients and breaking SSH replies to that subnet.
+        # Never let Docker auto-select a subnet on shared infrastructure.
+        # Keep this subnet isolated from site networks configured in private ops docs.
         - subnet: 10.89.0.0/24
           gateway: 10.89.0.1

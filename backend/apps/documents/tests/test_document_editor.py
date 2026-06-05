@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 
 from apps.documents.models import Document, DocumentVersion
@@ -7,6 +8,10 @@ from apps.library.models import Keyword, KnowledgeSpace
 
 
 class DocumentEditorTests(TestCase):
+    def setUp(self) -> None:
+        get_user_model().objects.create_user(username="member", password="member-password")
+        self.client.login(username="member", password="member-password")
+
     def test_creates_markdown_document_with_initial_version_and_keywords(self) -> None:
         space = KnowledgeSpace.objects.create(name="Linux 入门", kind=KnowledgeSpace.Kind.DOCS)
         response = self.client.post(
