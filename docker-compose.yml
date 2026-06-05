@@ -16,6 +16,7 @@ services:
     env_file:
       - .env
     volumes:
+      - ./current-release.json:/app/current-release.json:ro
       - ./storage:/app/storage
     depends_on:
       - postgres
@@ -30,6 +31,7 @@ services:
     env_file:
       - .env
     volumes:
+      - ./current-release.json:/app/current-release.json:ro
       - ./storage:/app/storage
     depends_on:
       - postgres
@@ -43,6 +45,7 @@ services:
     env_file:
       - .env
     volumes:
+      - ./current-release.json:/app/current-release.json:ro
       - ./storage:/app/storage
     depends_on:
       - postgres
@@ -56,6 +59,7 @@ services:
     env_file:
       - .env
     volumes:
+      - ./current-release.json:/app/current-release.json:ro
       - ./storage:/app/storage
     depends_on:
       - postgres
@@ -69,6 +73,7 @@ services:
     env_file:
       - .env
     volumes:
+      - ./current-release.json:/app/current-release.json:ro
       - ./storage:/app/storage
     depends_on:
       - postgres
