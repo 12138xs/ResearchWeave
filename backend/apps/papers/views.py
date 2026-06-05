@@ -6,9 +6,7 @@ from django.conf import settings
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
-from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.clickjacking import xframe_options_sameorigin
-from rest_framework.authentication import SessionAuthentication
 from rest_framework.generics import ListAPIView, RetrieveUpdateAPIView
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import AllowAny, BasePermission, IsAuthenticated
@@ -194,15 +192,8 @@ class PaperUploadNetworkPermission(BasePermission):
         )
 
 
-class CsrfExemptSessionAuthentication(SessionAuthentication):
-    def enforce_csrf(self, request):
-        return
-
-
-@method_decorator(csrf_exempt, name="dispatch")
 class PaperUploadView(APIView):
     permission_classes = [IsAuthenticated, PaperUploadNetworkPermission]
-    authentication_classes = [CsrfExemptSessionAuthentication]
     parser_classes = [MultiPartParser, FormParser]
 
     def post(self, request):
@@ -216,10 +207,8 @@ class PaperUploadView(APIView):
         return Response(payload, status=201)
 
 
-@method_decorator(csrf_exempt, name="dispatch")
 class PaperLightProcessView(APIView):
     permission_classes = [IsAuthenticated, PaperUploadNetworkPermission]
-    authentication_classes = [CsrfExemptSessionAuthentication]
 
     def post(self, request, pk: int):
         paper = get_object_or_404(Paper, pk=pk)
@@ -235,10 +224,8 @@ class PaperLightProcessView(APIView):
         )
 
 
-@method_decorator(csrf_exempt, name="dispatch")
 class PaperDeepProcessView(APIView):
     permission_classes = [IsAuthenticated, PaperUploadNetworkPermission]
-    authentication_classes = [CsrfExemptSessionAuthentication]
 
     def post(self, request, pk: int):
         paper = get_object_or_404(Paper, pk=pk)
@@ -274,10 +261,8 @@ class PaperDeepProfileListView(APIView):
         )
 
 
-@method_decorator(csrf_exempt, name="dispatch")
 class PaperDeepProfileActivateView(APIView):
     permission_classes = [IsAuthenticated, PaperUploadNetworkPermission]
-    authentication_classes = [CsrfExemptSessionAuthentication]
 
     def post(self, request, pk: int, profile_id: int):
         paper = get_object_or_404(Paper, pk=pk)
@@ -291,10 +276,8 @@ class PaperDeepProfileActivateView(APIView):
         )
 
 
-@method_decorator(csrf_exempt, name="dispatch")
 class PaperDeepProfileDeleteView(APIView):
     permission_classes = [IsAuthenticated, PaperUploadNetworkPermission]
-    authentication_classes = [CsrfExemptSessionAuthentication]
 
     def delete(self, request, pk: int, profile_id: int):
         paper = get_object_or_404(Paper, pk=pk)

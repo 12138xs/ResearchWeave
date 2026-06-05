@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 
 from apps.library.models import KnowledgeSpace
 
 
 class CatalogApiTests(TestCase):
+    def login_member(self) -> None:
+        get_user_model().objects.create_user(username="member", password="member-password")
+        self.client.login(username="member", password="member-password")
+
     def test_catalog_stats_returns_empty_totals(self) -> None:
         response = self.client.get("/api/catalog/stats/")
 
@@ -31,9 +36,10 @@ class CatalogApiTests(TestCase):
         response = self.client.get("/api/documents/")
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), [])
+        self.assertEqual(response.json()["results"], [])
 
     def test_can_create_nested_docs_knowledge_space(self) -> None:
+        self.login_member()
         parent = KnowledgeSpace.objects.create(name="Linux 入门", kind=KnowledgeSpace.Kind.DOCS)
 
         response = self.client.post(

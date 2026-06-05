@@ -6,6 +6,10 @@ from apps.documents.models import Document, DocumentSource, DocumentVersion
 from apps.library.models import KnowledgeSpace
 
 
+def results(payload):
+    return payload["results"] if isinstance(payload, dict) and "results" in payload else payload
+
+
 class DocumentSourceTests(TestCase):
     def test_document_detail_includes_sources(self) -> None:
         document = Document.objects.create(title="Shell Basics", summary="Linux shell", status="published")
@@ -53,7 +57,7 @@ class DocumentSourceTests(TestCase):
         response = self.client.get(f"/api/documents/?q=D{document.id:06d}")
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual([item["title"] for item in response.json()], ["Code Indexed Doc"])
+        self.assertEqual([item["title"] for item in results(response.json())], ["Code Indexed Doc"])
 
     def test_document_filter_includes_descendant_spaces(self) -> None:
         root = KnowledgeSpace.objects.create(name="Linux", kind=KnowledgeSpace.Kind.DOCS)
@@ -66,7 +70,7 @@ class DocumentSourceTests(TestCase):
         response = self.client.get(f"/api/documents/?space={root.id}&include_descendants=1")
 
         self.assertEqual(response.status_code, 200)
-        titles = {item["title"] for item in response.json()}
+        titles = {item["title"] for item in results(response.json())}
         self.assertEqual(titles, {"Linux Overview", "Shell Basics"})
 
     def test_document_filter_without_descendants_returns_direct_space_documents(self) -> None:
@@ -80,7 +84,7 @@ class DocumentSourceTests(TestCase):
         response = self.client.get(f"/api/documents/?space={root.id}")
 
         self.assertEqual(response.status_code, 200)
-        titles = {item["title"] for item in response.json()}
+        titles = {item["title"] for item in results(response.json())}
         self.assertEqual(titles, {"Linux Overview"})
 
     def test_numeric_slug_takes_precedence_over_matching_id(self) -> None:
@@ -103,7 +107,7 @@ class DocumentSourceTests(TestCase):
         response = self.client.get("/api/documents/?space=123")
 
         self.assertEqual(response.status_code, 200)
-        titles = {item["title"] for item in response.json()}
+        titles = {item["title"] for item in results(response.json())}
         self.assertEqual(titles, {"Slug Space Doc"})
 
     def test_oversized_numeric_space_filter_returns_empty_list(self) -> None:
@@ -113,7 +117,7 @@ class DocumentSourceTests(TestCase):
         response = self.client.get("/api/documents/?space=999999999999999999999999999999999999999")
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), [])
+        self.assertEqual(results(response.json()), [])
 
     def test_document_source_string_uses_title_url_or_source_type(self) -> None:
         titled_source = DocumentSource.objects.create(

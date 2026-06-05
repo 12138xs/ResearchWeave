@@ -71,16 +71,21 @@ class PaperDeepProcessingTests(TestCase):
         mocked_apply_async.assert_called_once()
 
     @patch("apps.papers.tasks.run_paper_deep_process_task.apply_async")
-    def test_logged_in_deep_process_does_not_require_csrf_token(self, mocked_apply_async) -> None:
+    def test_logged_in_deep_process_accepts_csrf_token(self, mocked_apply_async) -> None:
         client = Client(enforce_csrf_checks=True)
         client.login(username=self.user.username, password="member-password")
+        client.get("/api/me/")
+        csrf_token = client.cookies["csrftoken"].value
         paper = Paper.objects.create(
             title="PINNsFormer",
             status=Paper.Status.LIGHT_READY,
             source_pdf_path="quarantine/uploads/pinnsformer.pdf",
         )
 
-        response = client.post(f"/api/papers/{paper.id}/trigger-deep-process/")
+        response = client.post(
+            f"/api/papers/{paper.id}/trigger-deep-process/",
+            HTTP_X_CSRFTOKEN=csrf_token,
+        )
 
         self.assertEqual(response.status_code, 202)
         mocked_apply_async.assert_called_once()

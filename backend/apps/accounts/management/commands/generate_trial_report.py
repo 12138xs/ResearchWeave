@@ -89,10 +89,10 @@ class Command(BaseCommand):
             "签收日期：____________________",
             "试运行结论：通过 / 带已接受问题通过 / 继续试运行",
             "",
-            "## Old LAB Wiki Decision Gate",
+            "## 已退役旧系统边界",
             "",
-            "Do not stop or delete old LAB Wiki services without explicit user approval.",
-            "Confirm login, papers, documents, QA, task visibility, backup restore, and accepted failures first.",
+            "旧 LAB Wiki / Wiki.js / Dify / old portal 栈已退役，不属于当前试运行入口。",
+            "除非用户明确提供外部备份并要求回滚，不要重建旧目录或重启旧服务。",
             "",
         ]
         content = "\n".join(lines)

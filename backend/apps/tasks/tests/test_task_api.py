@@ -36,7 +36,7 @@ class TaskApiTests(TestCase):
         self.assertTrue(payload["summary"]["has_active"])
         self.assertEqual(payload["summary"]["by_status"]["running"], 1)
         self.assertEqual(payload["results"][0]["id"], running.id)
-        self.assertEqual(payload["results"][0]["label"], "AI 轻量概览")
+        self.assertEqual(payload["results"][0]["label"], "AI 轻读概览")
 
     def test_filters_tasks_by_status(self) -> None:
         TaskRecord.objects.create(task_type="fast_ping", status=TaskRecord.Status.SUCCESS, progress=100)

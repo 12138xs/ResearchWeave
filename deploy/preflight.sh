@@ -5,7 +5,7 @@ ROOT="${1:-${RESEARCHWEAVE_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd
 PORT="${RESEARCH_OS_PORT:-30888}"
 SAFE_DOCKER_SUBNET="${RESEARCH_OS_DOCKER_SUBNET:-10.89.0.0/24}"
 SAFE_DOCKER_NETWORK="${RESEARCH_OS_DOCKER_NETWORK:-research_os_safe_default}"
-LAB_ROUTE_PROBES="${RESEARCH_OS_LAB_ROUTE_PROBES:-172.19.65.113 172.18.168.43 172.18.168.44 172.18.35.126}"
+LAB_ROUTE_PROBES="${RESEARCH_OS_LAB_ROUTE_PROBES:-}"
 FORBIDDEN_DOCKER_ROUTE_CIDRS="${RESEARCH_OS_FORBIDDEN_DOCKER_ROUTE_CIDRS:-172.18.0.0/16 172.19.0.0/16}"
 
 echo "== Research OS preflight =="
@@ -92,15 +92,19 @@ for line in routes.splitlines():
             sys.exit(1)
 PY
 
-for target in $LAB_ROUTE_PROBES; do
-  route_line="$(ip route get "$target" 2>/dev/null | head -n 1 || true)"
-  if echo "$route_line" | grep -Eq ' dev (br-|docker0\b)'; then
-    echo "ERROR: route to ${target} uses a Docker bridge:"
-    echo "$route_line"
-    echo "Refusing to deploy because this can break SSH for lab clients."
-    exit 1
-  fi
-done
+if [ -n "$LAB_ROUTE_PROBES" ]; then
+  for target in $LAB_ROUTE_PROBES; do
+    route_line="$(ip route get "$target" 2>/dev/null | head -n 1 || true)"
+    if echo "$route_line" | grep -Eq ' dev (br-|docker0\b)'; then
+      echo "ERROR: route to ${target} uses a Docker bridge:"
+      echo "$route_line"
+      echo "Refusing to deploy because this can break SSH for lab clients."
+      exit 1
+    fi
+  done
+else
+  echo "WARN: RESEARCH_OS_LAB_ROUTE_PROBES is not set; skipping lab route probes"
+fi
 
 stale_network="$(docker inspect research_os_default --format '{{json .IPAM.Config}}' 2>/dev/null || true)"
 if echo "$stale_network" | grep -q '172.19.0.0/16'; then

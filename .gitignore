@@ -1,5 +1,6 @@
 .env
 .env.*
+!.env.example
 __pycache__/
 *.py[cod]
 .pytest_cache/
@@ -13,6 +14,7 @@ node_modules/
 dist/
 build/
 /storage/
+/backend/storage/
 /secrets/
 /backups/
 /logs/
