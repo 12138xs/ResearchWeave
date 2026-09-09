@@ -135,13 +135,20 @@ def _extract(version):
 
 
 def parse_version(version_id):
-    # One transaction per bounded document: duplicate delivery cannot duplicate evidence.
-    # If the worker dies, PostgreSQL rolls back; stale queued tasks can be retried.
+    # Commit the claim first so the UI can observe progress during extraction.
     with transaction.atomic():
         version = MaterialVersion.objects.select_for_update().get(pk=version_id)
         if version.status in {"ready", "needs_review"}:
             return
+        version.status = "processing"
+        version.save(update_fields=["status", "updated_at"])
         TaskRecord.objects.filter(pk=version.task_id).update(status="running", stage="提取证据", updated_at=timezone.now())
+    # One transaction per bounded document: duplicate delivery cannot duplicate evidence.
+    # If the worker dies, PostgreSQL rolls back; stale processing tasks can be retried.
+    with transaction.atomic():
+        version = MaterialVersion.objects.select_for_update().get(pk=version_id)
+        if version.status in {"ready", "needs_review"}:
+            return
         try:
             with transaction.atomic():
                 rows, warnings = _extract(version)

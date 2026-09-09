@@ -215,6 +215,17 @@ class IngestionTests(TestCase):
         self.assertEqual(version.status, "ready")
         self.assertEqual(version.evidence.count(), 1)
 
+    def test_processing_status_is_recorded_before_extraction(self):
+        from apps.materials.services import _extract
+        version, _ = self.upload()
+        def inspect(record):
+            record.refresh_from_db()
+            self.assertEqual(record.status, "processing")
+            self.assertEqual(record.task.status, "running")
+            return _extract(record)
+        with patch("apps.materials.services._extract", side_effect=inspect):
+            parse_version(version.pk)
+
     @skipUnless(os.getenv("MATERIAL_PDF_SAMPLE"), "未提供可选公开 PDF 验收样本")
     def test_public_fno_pdf_preserves_pages_original_and_old_citations(self):
         # Optional operator-provided arXiv:2010.08895v3; no network or bundled paper in tests.
