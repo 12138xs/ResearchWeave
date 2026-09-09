@@ -136,6 +136,45 @@ class AgentTests(TestCase):
         payload = self.client.get(f"/api/assistant/sessions/{self.session.pk}/").json()
         self.assertNotIn("sensitive", json.dumps(payload))
 
+    @patch("apps.assistant.agent.call_minimax_chat")
+    def test_source_removed_during_generation_discards_answer(self, model):
+        def respond(*args, **kwargs):
+            if model.call_count == 1:
+                return search()
+            self.version.delete()
+            return reply({"answer": "旧内容 [S1]", "source_ids": ["S1"]})
+        model.side_effect = respond
+        run_exchange(self.exchange.pk, 1)
+        self.exchange.refresh_from_db()
+        self.assertEqual(self.exchange.status, "failed")
+        self.assertEqual(self.exchange.answer, "")
+
+    @patch("apps.assistant.agent.call_minimax_chat")
+    def test_unapproved_tool_cannot_execute(self, model):
+        model.return_value = reply(calls=[{"id": "bad", "function": {"name": "delete_document", "arguments": "{}"}}])
+        run_exchange(self.exchange.pk, 1)
+        self.exchange.refresh_from_db()
+        self.assertEqual(self.exchange.status, "failed")
+        self.assertTrue(DocumentVersion.objects.filter(pk=self.version.pk).exists())
+
+    @patch("apps.assistant.agent.call_minimax_chat")
+    def test_tool_loop_is_bounded(self, model):
+        model.return_value = search()
+        run_exchange(self.exchange.pk, 1)
+        self.exchange.refresh_from_db()
+        self.assertEqual(self.exchange.status, "failed")
+        self.assertEqual(model.call_count, 4)
+
+    @patch("apps.assistant.tasks.answer_question.apply_async", side_effect=RuntimeError("secret broker"))
+    def test_dispatch_failure_is_visible_and_sanitized(self, dispatch):
+        self.exchange.delete()
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(f"/api/assistant/sessions/{self.session.pk}/messages/",
+                {"question": "PINN", "request_id": str(uuid.uuid4())}, content_type="application/json")
+        row = AssistantExchange.objects.get(pk=response.json()["id"])
+        self.assertEqual(row.status, "failed")
+        self.assertNotIn("secret", row.error)
+
 
 @skipUnless(os.getenv("RWV_LIVE_MINIMAX") == "1", "需显式启用服务器真实模型验收")
 class LiveAgentTests(TestCase):

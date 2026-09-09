@@ -3,6 +3,7 @@ import json
 import re
 
 from django.utils import timezone
+from django.contrib.auth import get_user_model
 
 from apps.ai.minimax import call_minimax_chat
 from apps.assistant.knowledge import search_knowledge, source_allowed
@@ -41,7 +42,7 @@ def run_exchange(exchange_id, attempt):
     def check():
         if not queryset.filter(status="running").exists():
             raise Stopped()
-        if not user or not user.is_active:
+        if not user or not get_user_model().objects.filter(pk=user.pk, is_active=True).exists():
             raise ValueError("用户已不可用")
         validate_scope(scope, user)
         if any(not source_allowed(source, user) for source in sources.values()):
