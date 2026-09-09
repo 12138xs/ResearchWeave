@@ -2,13 +2,14 @@
 import json
 import re
 
-from django.utils import timezone
 from django.contrib.auth import get_user_model
 
 from apps.ai.minimax import call_minimax_chat
 from apps.assistant.knowledge import search_knowledge, source_allowed
 from apps.assistant.models import AssistantExchange
 from apps.assistant.serializers import validate_scope
+from apps.assistant.services import update_execution
+from apps.tasks.models import TaskRecord
 
 
 TOOLS = [{"type": "function", "function": {
@@ -33,7 +34,7 @@ class Stopped(Exception):
 
 def run_exchange(exchange_id, attempt):
     queryset = AssistantExchange.objects.filter(pk=exchange_id, attempt=attempt)
-    if not queryset.filter(status="queued").update(status="running", progress="正在理解问题", updated_at=timezone.now()):
+    if not update_execution(exchange_id, attempt, "queued", status="running", progress="正在理解问题"):
         return
     exchange = queryset.select_related("session__created_by").get()
     user, scope = exchange.session.created_by, exchange.session.scope_json
@@ -51,7 +52,7 @@ def run_exchange(exchange_id, attempt):
 
     def progress(message):
         check()
-        queryset.filter(status="running").update(progress=message, updated_at=timezone.now())
+        update_execution(exchange_id, attempt, "running", progress=message)
 
     try:
         check()
@@ -125,15 +126,18 @@ def run_exchange(exchange_id, attempt):
                     raise ValueError("行内引用与来源不一致")
                 selected = [sources[label] for label in dict.fromkeys(labels)]
             check()
-            queryset.filter(status="running").update(answer=answer, sources=selected, model="MiniMax-M3",
-                usage=usage, status="completed", progress="回答完成", updated_at=timezone.now(),
+            update_execution(exchange_id, attempt, "running", answer=answer, sources=selected, model="MiniMax-M3",
+                usage=usage, status="completed", progress="回答完成",
                 context_warning="依据仅限本次检索摘录；推断与建议需要实验验证，未自动检索互联网。")
             return
         raise ValueError("工具循环未产生最终回答")
     except Stopped:
+        if exchange.task_id:
+            TaskRecord.objects.filter(pk=exchange.task_id).update(result={
+                "exchange_status": "cancelled_or_superseded", "attempt": attempt, **usage})
         return
     except Exception:
         usage["failure_stage"] = stage
-        queryset.filter(status="running").update(status="failed", usage=usage,
+        update_execution(exchange_id, attempt, "running", status="failed", usage=usage,
             error="回答未通过来源核验，或模型/检索暂时不可用。请重试；若范围权限已变化，请新建会话。",
-            progress="本次回答未发布", updated_at=timezone.now())
+            progress="本次回答未发布")

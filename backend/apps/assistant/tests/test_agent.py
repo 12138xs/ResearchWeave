@@ -12,6 +12,7 @@ from apps.assistant.agent import run_exchange
 from apps.assistant.models import AssistantExchange, AssistantSession
 from apps.assistant.services import control_exchange
 from apps.documents.models import Document, DocumentVersion
+from apps.tasks.models import TaskRecord
 
 
 def reply(answer=None, calls=None):
@@ -96,6 +97,7 @@ class AgentTests(TestCase):
         self.assertEqual(first.status_code, 202)
         self.assertEqual(first.json()["id"], second.json()["id"])
         publish.assert_called_once()
+        self.assertEqual(TaskRecord.objects.get(task_type="research_agent").created_by, self.user)
         payload["question"] = "different"
         self.assertEqual(self.client.post(url, payload, content_type="application/json").status_code, 409)
         payload["request_id"] = str(uuid.uuid4())

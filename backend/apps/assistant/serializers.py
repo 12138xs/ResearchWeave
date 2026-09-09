@@ -42,7 +42,7 @@ class AssistantExchangeSerializer(serializers.ModelSerializer):
             "id",
             "session",
             "question",
-            "request_id", "status", "attempt", "progress", "error", "updated_at",
+            "request_id", "status", "attempt", "progress", "error", "updated_at", "task",
             "answer",
             "sources",
             "model",

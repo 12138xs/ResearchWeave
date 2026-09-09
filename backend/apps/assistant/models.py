@@ -35,6 +35,7 @@ class AssistantExchange(models.Model):
     context_warning = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     request_id = models.UUIDField(null=True, blank=True)
+    task = models.ForeignKey("tasks.TaskRecord", null=True, blank=True, on_delete=models.SET_NULL)
     status = models.CharField(max_length=20, default="completed")
     attempt = models.PositiveIntegerField(default=1)
     progress = models.CharField(max_length=240, blank=True)
