@@ -54,6 +54,8 @@ class Evidence(models.Model):
     line_end = models.PositiveIntegerField(null=True)
     text = models.TextField(blank=True)
     review_required = models.BooleanField(default=False)
+    reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL)
+    reviewed_at = models.DateTimeField(null=True)
 
     class Meta:
         ordering = ["ordinal"]

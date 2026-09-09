@@ -10,7 +10,7 @@ type Version = {
   error: string; warnings: string[]; file_url: string;
 };
 type Material = { id: number; title: string; visibility: string; can_edit: boolean; versions: Version[] };
-type Evidence = { id: number; ordinal: number; page: number | null; line_start: number | null; line_end: number | null; text: string; review_required: boolean };
+type Evidence = { id: number; ordinal: number; page: number | null; line_start: number | null; line_end: number | null; text: string; review_required: boolean; reviewed_at: string | null };
 type Detail = Version & { evidence: Evidence[]; cards: { id: number; title: string; markdown: string; evidence_ids: number[] }[] };
 const emptyList = { count: 0, results: [] as Material[] };
 const emptyMaterial: Material = { id: 0, title: '', visibility: '', can_edit: false, versions: [] };
@@ -95,6 +95,20 @@ function VersionEvidence({ material, version, reload, refresh }: { material: Mat
   const [markdown, setMarkdown] = useState('');
   const [evidenceIds, setEvidenceIds] = useState<number[]>([]);
   const [busy, setBusy] = useState(false);
+  const [reviewing, setReviewing] = useState<number | null>(null);
+  const confirmReview = async () => {
+    if (!reviewing) return;
+    setBusy(true);
+    try {
+      await submit(`/api/materials/${material.id}/versions/${version.id}/evidence/${reviewing}/review/`, { confirmed: true });
+      setReviewing(null);
+      refresh();
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : '保存核对结果失败。');
+    } finally {
+      setBusy(false);
+    }
+  };
   const mutate = async (action: 'retry' | 'cards') => {
     setBusy(true);
     setMessage('');
@@ -120,12 +134,18 @@ function VersionEvidence({ material, version, reload, refresh }: { material: Mat
       <button type="button" disabled={busy} onClick={() => mutate('retry')}>重试解析（等待中的任务满 5 分钟后可重试）</button>}
     {data.evidence.map((evidence) => <article className="experiment-project-row" id={`evidence-${evidence.id}`} key={evidence.id}>
       <h3>{evidence.page ? `第 ${evidence.page} 页` : `第 ${evidence.line_start}–${evidence.line_end} 行`}</h3>
-      <p>{evidence.review_required ? '待核对原文' : '已提取文本'} · 证据 {evidence.id}</p>
+      <p>{evidence.reviewed_at ? '已人工核对' : evidence.review_required ? '待核对原文' : '已提取文本'} · 证据 {evidence.id}</p>
       {evidence.page && <a href={`${data.file_url}#page=${evidence.page}`} target="_blank" rel="noreferrer">打开原文此页</a>}
       <pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{evidence.text || '本页未提取到文字，请查看原文件。'}</pre>
+      {material.can_edit && evidence.review_required && evidence.text.trim() && <button type="button" disabled={busy} onClick={() => setReviewing(evidence.id)}>记录人工核对</button>}
       {material.can_edit && <label><input type="checkbox" checked={evidenceIds.includes(evidence.id)} onChange={(event) =>
         setEvidenceIds((old) => event.target.checked ? [...old, evidence.id] : old.filter((id) => id !== evidence.id))} />引用到研究卡片</label>}
     </article>)}
+    {reviewing && <section className="experiment-create-panel" role="group" aria-label="确认原文核对">
+      <p>请确认已打开对应原文，核对证据 {reviewing} 的文字、公式与阅读顺序。若存在错误，请保留待核对状态，并添加整理后的新版本。</p>
+      <button type="button" disabled={busy} onClick={confirmReview}>已核对，内容准确</button>
+      <button type="button" disabled={busy} onClick={() => setReviewing(null)}>暂不确认</button>
+    </section>}
     {material.can_edit && data.evidence.length > 0 && <section className="experiment-create-panel">
       <h2>导入研究卡片</h2>
       <p>粘贴整理好的 Markdown，并勾选上方依据。卡片属于衍生解读，不能替代原文。</p>

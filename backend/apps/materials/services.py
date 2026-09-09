@@ -122,7 +122,7 @@ def _extract(version):
             if total > MAX_TEXT:
                 raise ValueError("text limit")
             rows.append(Evidence(version=version, ordinal=number, page=number, text=text, review_required=True))
-        warnings.append("PDF 文本已按物理页码提取；公式、图表和阅读顺序尚未经人工核对。请以原文件为准。")
+        warnings.append("PDF 文本按物理页码提取，可能丢失公式、图表或阅读顺序。核对状态见各页，内容请以原文件为准。")
         if any(not row.text.strip() for row in rows):
             warnings.append("部分页面没有可提取文字，可能是扫描页；原页仍保留，不会自动生成缺失内容。")
     if not rows:

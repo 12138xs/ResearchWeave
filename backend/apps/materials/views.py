@@ -106,7 +106,7 @@ class VersionDetail(APIView):
     def get(self, request, pk, version_id):
         version = get_version(request.user, pk, version_id)
         data = version_data(version)
-        data["evidence"] = list(version.evidence.values("id", "ordinal", "page", "line_start", "line_end", "text", "review_required"))
+        data["evidence"] = list(version.evidence.values("id", "ordinal", "page", "line_start", "line_end", "text", "review_required", "reviewed_at"))
         data["cards"] = [{"id": card.pk, "title": card.title, "markdown": card.markdown,
                           "evidence_ids": [row.pk for row in card.evidence.all()], "kind": "derived"}
                          for card in version.cards.prefetch_related("evidence").order_by("id")]
@@ -150,6 +150,28 @@ class CardSerializer(serializers.Serializer):
     title = serializers.CharField(max_length=300)
     markdown = serializers.CharField(max_length=100_000)
     evidence_ids = serializers.ListField(child=serializers.IntegerField(min_value=1), min_length=1, max_length=100)
+
+
+class EvidenceReview(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk, version_id, evidence_id):
+        if request.data.get("confirmed") is not True:
+            raise ValidationError("请明确确认已对照原文核对文字与公式。")
+        with transaction.atomic():
+            version = get_version(request.user, pk, version_id, write=True, lock=True)
+            evidence = get_object_or_404(version.evidence, pk=evidence_id)
+            if not evidence.text.strip():
+                raise ValidationError("此页没有可用文字，不能标为已核对可用；请补充整理后的 Markdown 版本。")
+            if evidence.reviewed_at is None:
+                evidence.review_required = False
+                evidence.reviewed_by = request.user
+                evidence.reviewed_at = timezone.now()
+                evidence.save(update_fields=["review_required", "reviewed_by", "reviewed_at"])
+            if not version.evidence.filter(review_required=True).exists():
+                version.status = "ready"
+                version.save(update_fields=["status", "updated_at"])
+        return Response({"detail": "已记录核对结果。"})
 
 
 class CardImport(APIView):
