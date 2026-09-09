@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from rest_framework import serializers
 
-from apps.assistant.models import AssistantExchange, AssistantSession
+from apps.assistant.models import AssistantExchange, AssistantSession, PersonalEntry
 from apps.experiments.selectors import accessible_experiments
 from apps.papers.models import Paper
 from apps.documents.models import Document
@@ -15,6 +15,7 @@ def validate_scope(scope, user):
     if not isinstance(scope, dict):
         raise serializers.ValidationError("来源范围必须是对象。")
     sources = {
+        "note_ids": PersonalEntry.objects.filter(owner=user, kind="note", enabled=True),
         "material_ids": materials(user),
         "paper_ids": Paper.objects.all(), "document_ids": Document.objects.all(),
         "experiment_ids": accessible_experiments(user), "space_ids": KnowledgeSpace.objects.filter(is_active=True),

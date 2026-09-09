@@ -29,12 +29,16 @@ class AssistantSessionListView(generics.ListCreateAPIView):
         serializer.save(created_by=self.request.user)
 
 
-class AssistantSessionDetailView(generics.RetrieveAPIView):
+class AssistantSessionDetailView(generics.RetrieveDestroyAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = AssistantSessionSerializer
 
     def get_queryset(self):
         return AssistantSession.objects.filter(created_by=self.request.user).prefetch_related("exchanges")
+
+    def perform_destroy(self, instance):
+        from apps.assistant.workspace import delete_session
+        delete_session(instance)
 
 
 class AssistantMessageView(APIView):

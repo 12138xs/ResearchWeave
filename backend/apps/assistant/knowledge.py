@@ -9,6 +9,8 @@ from apps.materials.models import Evidence
 from apps.materials.selectors import materials
 from apps.papers.models import Paper
 from apps.search.evidence import excerpt, query_terms, visible_evidence
+from apps.assistant.models import PersonalEntry, ResearchPublication
+from apps.assistant.workspace_selectors import publication_allowed
 
 
 def source_allowed(source, user):
@@ -23,6 +25,11 @@ def source_allowed(source, user):
         return Paper.objects.filter(pk=pk).exists()
     if kind == "experiment":
         return accessible_experiments(user).filter(pk=pk).exists()
+    if kind == "personal_note":
+        return PersonalEntry.objects.filter(pk=pk, owner=user, kind="note", enabled=True).exists()
+    if kind == "publication":
+        row = ResearchPublication.objects.filter(pk=pk).first()
+        return bool(row and publication_allowed(row))
     return False
 
 
@@ -85,5 +92,15 @@ def search_knowledge(user, scope, query):
     for row in _matches(experiments, terms, ["title", "objective", "protocol_markdown"])[:4]:
         add("experiment", row.pk, row.title, row.objective + "\n" + row.protocol_markdown,
             "实验目标与方案，引用时快照")
+    if not scope or "note_ids" in scope:
+        notes = PersonalEntry.objects.filter(owner=user, kind="note", enabled=True)
+        if "note_ids" in scope:
+            notes = notes.filter(pk__in=scope["note_ids"])
+        for row in _matches(notes, terms, ["title", "body"])[:4]:
+            add("personal_note", row.pk, row.title, row.body, "本人的研究记录，非发表论文；引用时快照")
+    if not scope:
+        for row in _matches(ResearchPublication.objects.all(), terms, ["title", "body"])[:20]:
+            if publication_allowed(row):
+                add("publication", row.pk, row.title, row.body, "成员明确发布的研究记录，非论文结论")
     rows.sort(key=lambda row: sum(term in (row["title"] + row["excerpt"]).casefold() for term in terms), reverse=True)
     return rows[:8]

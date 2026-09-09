@@ -36,6 +36,7 @@ class AssistantExchange(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     request_id = models.UUIDField(null=True, blank=True)
     task = models.ForeignKey("tasks.TaskRecord", null=True, blank=True, on_delete=models.SET_NULL)
+    context_digest = models.CharField(max_length=64, blank=True)
     status = models.CharField(max_length=20, default="completed")
     attempt = models.PositiveIntegerField(default=1)
     progress = models.CharField(max_length=240, blank=True)
@@ -48,3 +49,39 @@ class AssistantExchange(models.Model):
 
     def __str__(self) -> str:
         return f"{self.session_id}:{self.question[:60]}"
+
+
+class PersonalProfile(models.Model):
+    owner = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    style = models.TextField(blank=True)
+    memory_enabled = models.BooleanField(default=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+
+class PersonalEntry(models.Model):
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    kind = models.CharField(max_length=16, choices=[("memory", "个人记忆"), ("note", "实验记录")])
+    title = models.CharField(max_length=240)
+    body = models.TextField()
+    enabled = models.BooleanField(default=True)
+    status = models.CharField(max_length=16, choices=[("planned", "计划"), ("observed", "观察"), ("concluded", "结论")], default="planned")
+    source_session = models.ForeignKey(AssistantSession, null=True, blank=True, on_delete=models.SET_NULL)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-updated_at", "-pk"]
+
+
+class ResearchPublication(models.Model):
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    source_entry = models.ForeignKey(PersonalEntry, null=True, on_delete=models.SET_NULL)
+    title = models.CharField(max_length=240)
+    body = models.TextField()
+    evidence_ids = models.JSONField(default=list)
+    request_id = models.UUIDField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-pk"]
+        constraints = [models.UniqueConstraint(fields=["owner", "request_id"], name="assistant_publication_once")]
