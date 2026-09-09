@@ -1,5 +1,7 @@
 import json
+import os
 from types import SimpleNamespace
+from unittest import skipUnless
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -96,3 +98,29 @@ class AssistedSearchTests(TestCase):
         result = self.search("PINN").json()
         self.assertEqual(result["results"], [])
         self.assertFalse(result["degraded"])
+
+
+@skipUnless(os.getenv("RWV_LIVE_MINIMAX") == "1", "需显式启用服务器真实模型验收")
+class LiveAssistedSearchTests(TestCase):
+    def test_live_m3_recovers_cross_language_source(self):
+        user = get_user_model().objects.create_user(username="live-search-fixture")
+        evidence_ids = []
+        for index, (title, text) in enumerate([
+            ("PINN demonstration", "Physics informed neural networks (PINNs) use partial differential equation residuals and boundary conditions in their training loss."),
+            ("Materials demonstration", "Crystal structure descriptors are used for screening candidate battery materials."),
+        ], 1):
+            material = Material.objects.create(title=title, owner=user, visibility="team")
+            version = MaterialVersion.objects.create(material=material, number=1, sha256=str(index) * 64,
+                filename="synthetic.md", format="md", size=len(text), storage_key="unused.md", status="ready", created_by=user)
+            evidence_ids.append(Evidence.objects.create(version=version, ordinal=1, line_start=1, line_end=1, text=text).pk)
+        self.client.force_login(user)
+        query = "用偏微分方程残差约束神经网络训练的相关材料"
+        baseline = self.client.get("/api/search/evidence/", {"q": query}).json()
+        self.assertEqual(baseline["results"], [])
+        response = self.client.post("/api/search/evidence/assist/", {"q": query}, content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["mode"], "assisted_keyword")
+        self.assertFalse(response.json()["degraded"])
+        self.assertIn(evidence_ids[0], [row["evidence_id"] for row in response.json()["results"]])
+        task = TaskRecord.objects.get(task_type="evidence_assist", created_by=user)
+        print(f"Live M3: keyword=0, enhanced={len(response.json()['results'])}, tokens={task.result['total_tokens']}")
