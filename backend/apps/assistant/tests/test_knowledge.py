@@ -38,3 +38,12 @@ class KnowledgeTests(TestCase):
         self.assertEqual(rows[0]["id"], newest.pk)
         self.assertEqual(len(rows[0]["sha256"]), 64)
         self.assertTrue(source_allowed({"type": "document", "id": self.document.pk}, self.other))
+
+    def test_relevance_is_ranked_before_candidate_limit(self):
+        for index in range(6):
+            doc = Document.objects.create(title=f"PINN weak {index}")
+            DocumentVersion.objects.create(document=doc, markdown="PINN only")
+        doc = Document.objects.create(title="PINN inverse coefficient")
+        best = DocumentVersion.objects.create(document=doc, markdown="PINN inverse coefficient identification")
+        rows = search_knowledge(self.other, {}, "PINN inverse coefficient")
+        self.assertEqual(rows[0]["id"], best.pk)

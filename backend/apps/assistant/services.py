@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils import timezone
 from rest_framework.exceptions import APIException
@@ -23,6 +24,7 @@ def _publish(exchange):
 
 def create_assistant_exchange(session, question, request_id):
     with transaction.atomic():
+        get_user_model().objects.select_for_update().get(pk=session.created_by_id)
         AssistantSession.objects.select_for_update().get(pk=session.pk)
         existing = session.exchanges.filter(request_id=request_id).first()
         if existing:
@@ -31,6 +33,8 @@ def create_assistant_exchange(session, question, request_id):
             return existing
         if session.exchanges.filter(status__in=["queued", "running"]).exists():
             raise Conflict()
+        if AssistantExchange.objects.filter(session__created_by_id=session.created_by_id, status__in=["queued", "running"]).count() >= 2:
+            raise Conflict("每人最多同时执行两个研究问题，请等待或取消已有任务。")
         exchange = AssistantExchange.objects.create(session=session, question=question, request_id=request_id,
             status="queued", progress="等待后台研究助理")
         session.save(update_fields=["updated_at"])
@@ -41,6 +45,7 @@ def create_assistant_exchange(session, question, request_id):
 
 def control_exchange(exchange, action, attempt):
     with transaction.atomic():
+        get_user_model().objects.select_for_update().get(pk=exchange.session.created_by_id)
         AssistantSession.objects.select_for_update().get(pk=exchange.session_id)
         exchange = AssistantExchange.objects.select_for_update().get(pk=exchange.pk)
         if exchange.attempt != attempt:
@@ -55,6 +60,9 @@ def control_exchange(exchange, action, attempt):
                 raise Conflict("任务尚在执行或已经完成。超过五分钟无进度时可重试。")
             if exchange.session.exchanges.exclude(pk=exchange.pk).filter(status__in=["queued", "running"]).exists():
                 raise Conflict()
+            if AssistantExchange.objects.filter(session__created_by_id=exchange.session.created_by_id,
+                    status__in=["queued", "running"]).exclude(pk=exchange.pk).count() >= 2:
+                raise Conflict("每人最多同时执行两个研究问题。")
             exchange.attempt += 1
             exchange.status, exchange.error, exchange.progress = "queued", "", "等待重试"
             exchange.answer, exchange.sources = "", []

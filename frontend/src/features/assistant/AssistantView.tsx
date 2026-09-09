@@ -41,7 +41,7 @@ export function AssistantView() {
       setConnection('');
       if (!active(row)) stream.close();
     });
-    stream.onerror = () => setConnection('进度连接暂断，正在自动重连；重连不会重复提交问题。');
+    stream.onerror = () => setConnection('正在等待下一次进度更新；自动重连不会重复提交问题。');
     return () => stream.close();
   }, [running?.id, running?.attempt, running?.session]);
 

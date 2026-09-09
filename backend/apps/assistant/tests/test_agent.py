@@ -136,6 +136,29 @@ class AgentTests(TestCase):
         payload = self.client.get(f"/api/assistant/sessions/{self.session.pk}/").json()
         self.assertNotIn("sensitive", json.dumps(payload))
 
+    def test_per_user_pending_work_is_bounded_across_sessions(self):
+        second = AssistantSession.objects.create(title="second", created_by=self.user)
+        AssistantExchange.objects.create(session=second, question="second", status="running")
+        third = AssistantSession.objects.create(title="third", created_by=self.user)
+        result = self.client.post(f"/api/assistant/sessions/{third.pk}/messages/",
+            {"question": "PINN", "request_id": str(uuid.uuid4())}, content_type="application/json")
+        self.assertEqual(result.status_code, 409)
+        self.assertEqual(third.exchanges.count(), 0)
+
+    @patch("apps.assistant.agent.call_minimax_chat")
+    def test_multi_turn_history_is_bounded_and_retrieves_again(self, model):
+        previous = self.exchange
+        previous.status, previous.answer, previous.model = "completed", "先前答案 [S1]", "MiniMax-M3"
+        previous.sources = [{"type": "document", "id": self.version.pk}]
+        previous.save()
+        followup = AssistantExchange.objects.create(session=self.session, question="如何改进", status="queued")
+        model.side_effect = [search(), reply({"answer": "建议验证损失权重 [S1]", "source_ids": ["S1"]})]
+        run_exchange(followup.pk, 1)
+        followup.refresh_from_db()
+        self.assertEqual(followup.status, "completed")
+        self.assertIn("先前答案", str(model.call_args.args[0]))
+        self.assertEqual(followup.usage["tool_calls"], 1)
+
     @patch("apps.assistant.agent.call_minimax_chat")
     def test_source_removed_during_generation_discards_answer(self, model):
         def respond(*args, **kwargs):
