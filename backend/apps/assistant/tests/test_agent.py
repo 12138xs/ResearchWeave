@@ -184,9 +184,17 @@ class LiveAgentTests(TestCase):
         DocumentVersion.objects.create(document=document, markdown="Physics informed neural networks (PINNs) penalize PDE residuals and boundary condition errors in their loss. This synthetic note provides no numerical benchmark or proof of convergence.")
         session = AssistantSession.objects.create(title="真实接口小样", created_by=user, scope_json={"document_ids": [document.pk]})
         exchange = AssistantExchange.objects.create(session=session, question="根据材料说明 PINN 使用什么损失，并给出一条需验证的改进建议。", status="queued")
-        run_exchange(exchange.pk, 1)
+        from apps.ai.minimax import call_minimax_chat
+        def observe(*args, **kwargs):
+            response = call_minimax_chat(*args, **kwargs)
+            choice = response.raw["choices"][0]
+            print("Live response:", choice.get("finish_reason"), "content_chars=", len(response.content),
+                  "tools=", len(choice["message"].get("tool_calls") or []), "tokens=", response.usage.get("total_tokens"))
+            return response
+        with patch("apps.assistant.agent.call_minimax_chat", side_effect=observe):
+            run_exchange(exchange.pk, 1)
         exchange.refresh_from_db()
-        self.assertEqual(exchange.status, "completed", exchange.error)
+        self.assertEqual(exchange.status, "completed", f"{exchange.error} {exchange.usage}")
         self.assertTrue(exchange.sources)
         self.assertIn("[S", exchange.answer)
         self.assertGreaterEqual(exchange.usage["tool_calls"], 1)

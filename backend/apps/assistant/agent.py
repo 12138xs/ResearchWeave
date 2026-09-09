@@ -38,6 +38,7 @@ def run_exchange(exchange_id, attempt):
     exchange = queryset.select_related("session__created_by").get()
     user, scope = exchange.session.created_by, exchange.session.scope_json
     sources, usage, searched = {}, {"total_tokens": 0, "model_calls": 0, "tool_calls": 0}, False
+    stage = "authorization"
 
     def check():
         if not queryset.filter(status="running").exists():
@@ -68,12 +69,14 @@ def run_exchange(exchange_id, attempt):
             if any(not source_allowed(source, user) for source in history_sources):
                 raise ValueError("历史来源权限已变化")
             progress("正在检索相关材料" if turn == 0 else "正在比较证据并组织回答")
+            stage = "model_request"
             response = call_minimax_chat(messages, model="MiniMax-M3", tools=TOOLS if turn < 3 else None,
                                          temperature=0.1, max_tokens=2400, timeout=35)
             usage["model_calls"] += 1
             usage["total_tokens"] += int(response.usage.get("total_tokens", 0) or 0)
             check()
             message = response.raw["choices"][0]["message"]
+            stage = "tool_validation"
             calls = message.get("tool_calls") or []
             if calls:
                 if turn >= 3 or len(calls) > 2:
@@ -107,6 +110,7 @@ def run_exchange(exchange_id, attempt):
                 continue
             if not searched:
                 raise ValueError("未检索就回答")
+            stage = "answer_validation"
             if not sources:
                 answer, selected = "当前授权知识库未检索到足够材料，无法据此判断。请补充相关论文或换用更具体的中英文术语。", []
             else:
@@ -129,6 +133,7 @@ def run_exchange(exchange_id, attempt):
     except Stopped:
         return
     except Exception:
+        usage["failure_stage"] = stage
         queryset.filter(status="running").update(status="failed", usage=usage,
             error="回答未通过来源核验，或模型/检索暂时不可用。请重试；若范围权限已变化，请新建会话。",
             progress="本次回答未发布", updated_at=timezone.now())
