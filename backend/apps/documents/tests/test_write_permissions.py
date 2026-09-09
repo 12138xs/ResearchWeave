@@ -3,7 +3,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 from django.test import SimpleTestCase
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated
 
 from apps.documents.views import (
     DocumentDetailView,
@@ -32,7 +32,7 @@ class WritePermissionTests(SimpleTestCase):
         self.assertEqual(len(permissions), 1)
         self.assertIsInstance(permissions[0], expected_type)
 
-    def test_document_reads_remain_public(self) -> None:
+    def test_document_reads_require_login(self) -> None:
         for view_cls in [
             DocumentListView,
             DocumentDetailView,
@@ -42,7 +42,7 @@ class WritePermissionTests(SimpleTestCase):
             DocumentImportCandidateDetailView,
         ]:
             with self.subTest(view=view_cls.__name__):
-                self.assert_permission(view_cls, "GET", AllowAny)
+                self.assert_permission(view_cls, "GET", IsAuthenticated)
 
     def test_document_writes_require_login(self) -> None:
         for view_cls, method in [
@@ -58,10 +58,10 @@ class WritePermissionTests(SimpleTestCase):
             with self.subTest(view=view_cls.__name__, method=method):
                 self.assert_permission(view_cls, method, IsAuthenticated)
 
-    def test_knowledge_space_reads_remain_public(self) -> None:
+    def test_knowledge_space_reads_require_login(self) -> None:
         for view_cls in [KnowledgeSpaceListView, KnowledgeSpaceDetailView]:
             with self.subTest(view=view_cls.__name__):
-                self.assert_permission(view_cls, "GET", AllowAny)
+                self.assert_permission(view_cls, "GET", IsAuthenticated)
 
     def test_knowledge_space_writes_require_login(self) -> None:
         for view_cls, method in [
@@ -73,6 +73,6 @@ class WritePermissionTests(SimpleTestCase):
             with self.subTest(view=view_cls.__name__, method=method):
                 self.assert_permission(view_cls, method, IsAuthenticated)
 
-    def test_image_reads_remain_public_but_upload_requires_login(self) -> None:
-        self.assert_permission(ImageAssetView, "GET", AllowAny)
+    def test_image_reads_require_login_but_upload_requires_login(self) -> None:
+        self.assert_permission(ImageAssetView, "GET", IsAuthenticated)
         self.assert_permission(ImageUploadView, "POST", IsAuthenticated)

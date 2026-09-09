@@ -3,7 +3,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 from django.test import SimpleTestCase
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated
 
 from apps.experiments.views import (
     ExperimentDetailView,
@@ -22,10 +22,10 @@ class ExperimentPermissionTests(SimpleTestCase):
         self.assertEqual(len(permissions), 1)
         self.assertIsInstance(permissions[0], expected_type)
 
-    def test_reads_remain_public(self) -> None:
+    def test_reads_require_login(self) -> None:
         for view_cls in [ExperimentListView, ExperimentDetailView, ExperimentRunListView, ExperimentRunDetailView]:
             with self.subTest(view=view_cls.__name__):
-                self.assert_permission(view_cls, "GET", AllowAny)
+                self.assert_permission(view_cls, "GET", IsAuthenticated)
 
     def test_writes_require_login(self) -> None:
         for view_cls, method in [

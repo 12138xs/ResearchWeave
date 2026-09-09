@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 
 from apps.documents.models import Document, DocumentSource, DocumentVersion
@@ -11,6 +12,9 @@ def results(payload):
 
 
 class DocumentSourceTests(TestCase):
+    def setUp(self):
+        self.client.force_login(get_user_model().objects.create_user(username="reader"))
+
     def test_document_detail_includes_sources(self) -> None:
         document = Document.objects.create(title="Shell Basics", summary="Linux shell", status="published")
         DocumentVersion.objects.create(document=document, version=1, markdown="# Shell", is_current=True)

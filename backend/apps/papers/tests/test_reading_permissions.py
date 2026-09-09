@@ -3,7 +3,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 from django.test import SimpleTestCase
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated
 
 from apps.papers.views import PaperReadingReviewDetailView, PaperReadingReviewListView, PaperReadingStateView
 
@@ -16,9 +16,9 @@ class PaperReadingPermissionTests(SimpleTestCase):
         self.assertEqual(len(permissions), 1)
         self.assertIsInstance(permissions[0], expected_type)
 
-    def test_reading_reads_remain_public(self) -> None:
-        self.assert_permission(PaperReadingStateView, "GET", AllowAny)
-        self.assert_permission(PaperReadingReviewListView, "GET", AllowAny)
+    def test_reading_reads_require_login(self) -> None:
+        self.assert_permission(PaperReadingStateView, "GET", IsAuthenticated)
+        self.assert_permission(PaperReadingReviewListView, "GET", IsAuthenticated)
 
     def test_reading_writes_require_login(self) -> None:
         self.assert_permission(PaperReadingStateView, "PATCH", IsAuthenticated)

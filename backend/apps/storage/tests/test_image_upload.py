@@ -42,6 +42,7 @@ class ImageUploadTests(TestCase):
         self.assertIn("image", response.json())
 
     def test_serves_uploaded_image(self) -> None:
+        self.login_member()
         with TemporaryDirectory() as tmpdir:
             image_path = Path(tmpdir) / "objects/images/example.png"
             image_path.parent.mkdir(parents=True)

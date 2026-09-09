@@ -36,6 +36,7 @@ class ExperimentRunSerializer(serializers.ModelSerializer):
 
 class ExperimentProjectSerializer(serializers.ModelSerializer):
     owner_username = serializers.SerializerMethodField()
+    can_edit = serializers.SerializerMethodField()
     paper_title = serializers.CharField(source="paper.title", read_only=True)
     document_title = serializers.CharField(source="document.title", read_only=True)
     space_path = serializers.SerializerMethodField()
@@ -53,6 +54,7 @@ class ExperimentProjectSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "title",
+            "visibility",
             "slug",
             "paper",
             "paper_title",
@@ -63,6 +65,7 @@ class ExperimentProjectSerializer(serializers.ModelSerializer):
             "status",
             "owner",
             "owner_username",
+            "can_edit",
             "objective",
             "protocol_markdown",
             "repo_url",
@@ -71,10 +74,16 @@ class ExperimentProjectSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "slug", "created_at", "updated_at"]
+        read_only_fields = ["id", "slug", "owner", "created_at", "updated_at"]
 
     def get_owner_username(self, obj):
         return obj.owner.username if obj.owner else None
+
+    def get_can_edit(self, obj):
+        request = self.context.get("request")
+        if request is None or not request.user.is_authenticated:
+            return False
+        return obj.owner_id == request.user.pk or (obj.visibility == "team" and request.user.is_staff)
 
     def get_space_path(self, obj):
         return obj.space.path_label() if obj.space else None

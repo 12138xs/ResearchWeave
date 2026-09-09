@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from rest_framework import generics, status
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -13,17 +13,18 @@ from apps.tasks.serializers import TaskRecordSerializer
 
 
 class QualityIssueListView(generics.ListAPIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     serializer_class = QualityIssueSerializer
 
     def get_queryset(self):
-        return quality_issue_queryset(self.request.query_params)
+        return quality_issue_queryset(self.request.query_params, user=self.request.user)
 
 
 class QualityIssueDetailView(generics.UpdateAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = QualityIssueSerializer
-    queryset = QualityIssue.objects.select_related("source_task", "reviewed_by")
+    def get_queryset(self):
+        return quality_issue_queryset({}, user=self.request.user, write=True)
 
 
 class QualityAuditEnqueueView(APIView):

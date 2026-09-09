@@ -20,6 +20,7 @@ export function ExperimentsView() {
   const [showCreate, setShowCreate] = useState(false);
   const [title, setTitle] = useState('');
   const [objective, setObjective] = useState('');
+  const [visibility, setVisibility] = useState<'private' | 'team'>('private');
   const [message, setMessage] = useState('');
   const { data, loading, error } = useApiData<ExperimentListResponse>(`/api/experiments/?reload=${reload}`, emptyExperiments);
   const submit = async () => {
@@ -29,10 +30,12 @@ export function ExperimentsView() {
       title: title.trim(),
       status: 'planned',
       objective,
+      visibility,
       protocol_markdown: `# ${title.trim()}\n\n## 目标\n${objective || '待补充'}\n\n## 实验协议\n- 记录数据、环境和参数\n- 运行实验\n- 汇总指标\n`
     });
     setTitle('');
     setObjective('');
+    setVisibility('private');
     setShowCreate(false);
     setMessage(`已创建实验项目：${(payload as ExperimentProject).title}`);
     setReload((value) => value + 1);
@@ -65,6 +68,13 @@ export function ExperimentsView() {
               <textarea value={objective} onChange={(event) => setObjective(event.target.value)} placeholder="实验目标、对照指标、验证问题或预期结论" />
             </label>
             <div className="experiment-create-actions">
+              <label>
+                <span>可见范围</span>
+                <select value={visibility} onChange={(event) => setVisibility(event.target.value as 'private' | 'team')}>
+                  <option value="private">仅本人</option>
+                  <option value="team">团队共享</option>
+                </select>
+              </label>
               <button type="button" onClick={submit} disabled={!title.trim()}>创建项目</button>
               <button type="button" className="secondary-button" onClick={() => setShowCreate(false)}>取消</button>
             </div>
@@ -87,6 +97,7 @@ export function ExperimentsView() {
             </div>
             <p>{experiment.objective || '暂无实验目标。'}</p>
             <div className="experiment-row-meta">
+              <span>{experiment.visibility === 'private' ? '仅本人' : '团队共享'}</span>
               {experiment.paper_title && <span>关联论文：{experiment.paper_title}</span>}
               <Link to={`/experiments/${experiment.id}`}>查看详情</Link>
             </div>
@@ -140,16 +151,19 @@ export function ExperimentDetailView() {
               <StatusPill value={experiment.status} />
             </div>
             <p>{experiment.objective || '暂无实验目标。'}</p>
+            <p className="muted">{experiment.visibility === 'private' ? '仅本人可见' : '团队成员可见'}</p>
             <RichBlock title="复现实验协议" content={experiment.protocol_markdown || '暂无协议。'} />
           </article>
 
           <aside className="experiment-run-panel">
             <h2>运行记录</h2>
-            <label>
-              <span>新增 run</span>
-              <textarea value={runNotes} onChange={(event) => setRunNotes(event.target.value)} placeholder="本次运行说明、参数、环境或指标备注" />
-            </label>
-            <button type="button" onClick={addRun}>添加 run</button>
+            {experiment.can_edit && <>
+              <label>
+                <span>新增运行记录</span>
+                <textarea value={runNotes} onChange={(event) => setRunNotes(event.target.value)} placeholder="本次运行说明、参数、环境或指标备注" />
+              </label>
+              <button type="button" onClick={addRun}>添加运行记录</button>
+            </>}
             {message && <p className="form-message">{message}</p>}
             <div className="experiment-run-list">
               {(experiment.runs ?? []).map((run) => (
@@ -158,7 +172,7 @@ export function ExperimentDetailView() {
                     <StatusPill value={run.status} />
                     <p>{run.notes || `Run #${run.id}`}</p>
                   </div>
-                  {run.status === 'planned' && <button type="button" className="secondary-button" onClick={() => executeRun(run)}>执行</button>}
+                  {experiment.can_edit && run.status === 'planned' && <button type="button" className="secondary-button" onClick={() => executeRun(run)}>执行</button>}
                 </div>
               ))}
               {(experiment.runs ?? []).length === 0 && <p className="muted">暂无运行记录。</p>}

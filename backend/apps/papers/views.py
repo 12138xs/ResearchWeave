@@ -9,7 +9,7 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 from rest_framework.generics import ListAPIView, RetrieveUpdateAPIView
 from rest_framework.parsers import FormParser, MultiPartParser
-from rest_framework.permissions import AllowAny, BasePermission, IsAuthenticated
+from rest_framework.permissions import BasePermission, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -50,7 +50,7 @@ from apps.tasks.serializers import TaskRecordSerializer
 
 class PaperQuerysetMixin:
     serializer_class = PaperSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         return filtered_paper_queryset(self.request.query_params)
@@ -61,7 +61,7 @@ class PaperListView(PaperQuerysetMixin, ListAPIView):
 
 
 class PaperSearchView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         context, missing_keywords = paper_search_context(request.query_params)
@@ -88,7 +88,7 @@ class PaperDetailView(PaperQuerysetMixin, RetrieveUpdateAPIView):
     def get_permissions(self):
         if self.request.method in {"PATCH", "PUT", "DELETE"}:
             return [IsAuthenticated()]
-        return [AllowAny()]
+        return [IsAuthenticated()]
 
     def get_serializer_class(self):
         if self.request.method in {"PATCH", "PUT"}:
@@ -132,7 +132,7 @@ class PaperReadingStateView(APIView):
     def get_permissions(self):
         if self.request.method in {"PATCH", "PUT"}:
             return [IsAuthenticated()]
-        return [AllowAny()]
+        return [IsAuthenticated()]
 
     def get(self, request, pk: int):
         paper = get_object_or_404(Paper, pk=pk)
@@ -151,7 +151,7 @@ class PaperReadingReviewListView(APIView):
     def get_permissions(self):
         if self.request.method == "POST":
             return [IsAuthenticated()]
-        return [AllowAny()]
+        return [IsAuthenticated()]
 
     def get(self, request, pk: int):
         paper = get_object_or_404(Paper, pk=pk)
@@ -247,7 +247,7 @@ class PaperDeepProcessView(APIView):
 
 
 class PaperDeepProfileListView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, pk: int):
         paper = get_object_or_404(Paper, pk=pk)
@@ -292,7 +292,7 @@ class PaperDeepProfileDeleteView(APIView):
 
 @method_decorator(xframe_options_sameorigin, name="dispatch")
 class PaperPdfView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, pk: int):
         paper = get_object_or_404(Paper, pk=pk)

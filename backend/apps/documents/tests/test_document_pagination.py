@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 
 from apps.documents.models import Document, DocumentSource, DocumentVersion
@@ -7,6 +8,9 @@ from apps.library.models import KnowledgeSpace
 
 
 class DocumentPaginationTests(TestCase):
+    def setUp(self):
+        self.client.force_login(get_user_model().objects.create_user(username="reader"))
+
     def test_list_returns_paginated_payload(self) -> None:
         source = DocumentSource.objects.create(source_type=DocumentSource.SourceType.MANUAL, title="Source")
         for index in range(30):

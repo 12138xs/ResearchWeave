@@ -6,6 +6,8 @@ from django.conf import settings
 from django.db import models
 from django.utils.text import slugify
 
+from apps.common.permissions import Visibility
+
 from apps.documents.models import Document
 from apps.library.models import KnowledgeSpace, TimeStampedModel
 from apps.papers.models import Paper
@@ -20,6 +22,7 @@ class ExperimentProject(TimeStampedModel):
         ARCHIVED = "archived", "Archived"
 
     title = models.CharField(max_length=240)
+    visibility = models.CharField(max_length=16, choices=Visibility.choices, default=Visibility.PRIVATE)
     slug = models.SlugField(max_length=260, unique=True, allow_unicode=True)
     paper = models.ForeignKey(Paper, null=True, blank=True, related_name="experiment_projects", on_delete=models.SET_NULL)
     document = models.ForeignKey(Document, null=True, blank=True, related_name="experiment_projects", on_delete=models.SET_NULL)

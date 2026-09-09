@@ -3,6 +3,12 @@ from __future__ import annotations
 from django.db.models import Q, QuerySet
 
 from apps.experiments.models import ExperimentProject
+from apps.common.permissions import editable_by, visible_to
+
+
+def accessible_experiments(user, *, write=False, params=None):
+    queryset = experiment_queryset(params)
+    return editable_by(queryset, user) if write else visible_to(queryset, user)
 
 
 def experiment_queryset(params=None) -> QuerySet[ExperimentProject]:

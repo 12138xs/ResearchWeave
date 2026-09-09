@@ -10,6 +10,7 @@ from apps.assistant.serializers import (
     AssistantExchangeSerializer,
     AssistantMessageInputSerializer,
     AssistantSessionSerializer,
+    validate_scope,
 )
 from apps.assistant.services import create_assistant_exchange
 
@@ -38,6 +39,7 @@ class AssistantMessageView(APIView):
 
     def post(self, request, pk: int):
         session = generics.get_object_or_404(AssistantSession, pk=pk, created_by=request.user)
+        validate_scope(session.scope_json, request.user)
         input_serializer = AssistantMessageInputSerializer(data=request.data)
         input_serializer.is_valid(raise_exception=True)
         exchange = create_assistant_exchange(session, input_serializer.validated_data["question"])

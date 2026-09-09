@@ -30,6 +30,8 @@ class QualityIssueSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = [
             "id",
+            "object_type",
+            "object_id",
             "source_task",
             "reviewed_by",
             "reviewed_at",

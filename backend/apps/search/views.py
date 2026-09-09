@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from rest_framework import generics, status
 from rest_framework.pagination import PageNumberPagination
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -19,12 +19,12 @@ class SearchResultsPagination(PageNumberPagination):
 
 
 class SearchView(generics.ListAPIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     serializer_class = SearchIndexEntrySerializer
     pagination_class = SearchResultsPagination
 
     def get_queryset(self):
-        return search_entries(self.request.query_params)
+        return search_entries(self.request.query_params, user=self.request.user)
 
 
 class SearchReindexView(APIView):

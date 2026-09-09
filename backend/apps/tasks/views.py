@@ -3,22 +3,23 @@ from __future__ import annotations
 from django.db.models import Count
 from django.utils import timezone
 from rest_framework.generics import RetrieveAPIView
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.tasks.models import TaskRecord
 from apps.tasks.serializers import TaskRecordSerializer
+from apps.tasks.selectors import visible_tasks
 
 
 ACTIVE_STATUSES = {TaskRecord.Status.PENDING, TaskRecord.Status.RUNNING}
 
 
 class TaskListView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        queryset = TaskRecord.objects.all()
+        queryset = visible_tasks(request.user)
         status_value = request.query_params.get("status", "").strip()
         task_type = request.query_params.get("task_type", "").strip()
         limit = _positive_int(request.query_params.get("limit"), default=30, maximum=100)
@@ -46,16 +47,17 @@ class TaskListView(APIView):
 
 class TaskDetailView(RetrieveAPIView):
     serializer_class = TaskRecordSerializer
-    permission_classes = [AllowAny]
-    queryset = TaskRecord.objects.all()
+    permission_classes = [IsAuthenticated]
+    def get_queryset(self):
+        return visible_tasks(self.request.user)
 
 
 class TaskStatusView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         requested_ids = _parse_ids(request.query_params.get("ids", ""))
-        tasks = list(TaskRecord.objects.filter(id__in=requested_ids))
+        tasks = list(visible_tasks(request.user).filter(id__in=requested_ids))
         by_id = {task.id: task for task in tasks}
         ordered_tasks = [by_id[task_id] for task_id in requested_ids if task_id in by_id]
         return Response(

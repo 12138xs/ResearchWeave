@@ -6,6 +6,7 @@ from apps.library.models import KnowledgeSpace
 from apps.papers.models import Paper
 from apps.quality.models import QualityIssue
 from apps.research_map.models import DirectionMapSnapshot, KnowledgeSpaceRelation
+from apps.common.permissions import Visibility
 
 
 def direction_map_payload(root_space: KnowledgeSpace) -> dict[str, object]:
@@ -47,10 +48,10 @@ def _space_node(space: KnowledgeSpace) -> dict[str, object]:
         "description": space.description,
         "paper_count": Paper.objects.filter(space=space).count(),
         "document_count": Document.objects.filter(space=space).count(),
-        "experiment_count": ExperimentProject.objects.filter(space=space).count(),
+        "experiment_count": ExperimentProject.objects.filter(space=space, visibility=Visibility.TEAM).count(),
         "open_quality_issue_count": QualityIssue.objects.filter(
             status=QualityIssue.Status.OPEN,
-            object_type__in=["paper", "document", "experiment"],
+            object_type__in=["paper", "document"],
         ).count(),
     }
 
@@ -60,7 +61,13 @@ def _snapshot_payload(snapshot: DirectionMapSnapshot) -> dict[str, object]:
         "id": snapshot.id,
         "root_space": snapshot.root_space_id,
         "version": snapshot.version,
-        "nodes_json": snapshot.nodes_json,
+        "nodes_json": [
+            {**node, "experiment_count": ExperimentProject.objects.filter(
+                space_id=node.get("id"), visibility=Visibility.TEAM).count(),
+             "open_quality_issue_count": QualityIssue.objects.filter(
+                 status=QualityIssue.Status.OPEN, object_type__in=["paper", "document"]).count()}
+            for node in snapshot.nodes_json
+        ],
         "edges_json": snapshot.edges_json,
         "generator": snapshot.generator,
         "is_active": snapshot.is_active,

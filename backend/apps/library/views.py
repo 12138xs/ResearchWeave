@@ -3,7 +3,7 @@ from __future__ import annotations
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateAPIView
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -90,14 +90,14 @@ class KnowledgeSpaceArchiveView(ReadOnlyOrAuthenticatedWriteMixin, APIView):
 
 
 class CatalogStatsView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         return Response(catalog_stats_payload())
 
 
 class KeywordLibraryView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         serializer = KeywordLibraryEntrySerializer(keyword_library_payload(), many=True)
@@ -105,7 +105,7 @@ class KeywordLibraryView(APIView):
 
 
 class KeywordSuggestView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         query = request.query_params.get("q", "").strip().lower()

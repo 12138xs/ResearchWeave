@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 
 from apps.documents.models import Document
@@ -9,6 +10,7 @@ from apps.papers.models import Paper
 
 class PaperFilterTests(TestCase):
     def setUp(self) -> None:
+        self.client.force_login(get_user_model().objects.create_user(username="reader"))
         self.pinn = Keyword.objects.create(name="PINN")
         self.transformer = Keyword.objects.create(name="Transformer")
         self.navier = Keyword.objects.create(name="Navier-Stokes")

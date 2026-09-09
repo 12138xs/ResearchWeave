@@ -3,10 +3,16 @@ from __future__ import annotations
 from django.db.models import Q, QuerySet
 
 from apps.search.models import SearchIndexEntry
+from apps.experiments.selectors import accessible_experiments
 
 
-def search_entries(params) -> QuerySet[SearchIndexEntry]:
+def search_entries(params, *, user=None) -> QuerySet[SearchIndexEntry]:
     queryset = SearchIndexEntry.objects.all()
+    if not getattr(user, "is_authenticated", False):
+        return queryset.none()
+    queryset = queryset.filter(
+        ~Q(object_type="experiment") | Q(object_id__in=accessible_experiments(user).values("id"))
+    )
     query = params.get("q", "").strip()
     scope = {
         item.strip()

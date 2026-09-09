@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 
 from apps.documents.models import Document
@@ -9,6 +10,9 @@ from apps.papers.models import Paper
 
 
 class KeywordApiTests(TestCase):
+    def setUp(self):
+        self.client.force_login(get_user_model().objects.create_user(username="reader"))
+
     def test_keyword_library_groups_known_aliases(self) -> None:
         pinn = Keyword.objects.create(name="PINN")
         long_name = Keyword.objects.create(name="Physics-Informed Neural Network")

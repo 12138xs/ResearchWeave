@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import timedelta
 
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.utils import timezone
 
@@ -9,8 +10,12 @@ from apps.tasks.models import TaskRecord
 
 
 class TaskApiTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(username="task-owner")
+        self.client.force_login(self.user)
+
     def test_lists_recent_tasks_with_summary(self) -> None:
-        TaskRecord.objects.create(
+        TaskRecord.objects.create(created_by=self.user,
             task_type="paper_light_process",
             status=TaskRecord.Status.SUCCESS,
             progress=100,
@@ -18,7 +23,7 @@ class TaskApiTests(TestCase):
             object_type="paper",
             object_id=11,
         )
-        running = TaskRecord.objects.create(
+        running = TaskRecord.objects.create(created_by=self.user,
             task_type="paper_ai_light_process",
             status=TaskRecord.Status.RUNNING,
             progress=45,
@@ -39,8 +44,8 @@ class TaskApiTests(TestCase):
         self.assertEqual(payload["results"][0]["label"], "AI 轻读概览")
 
     def test_filters_tasks_by_status(self) -> None:
-        TaskRecord.objects.create(task_type="fast_ping", status=TaskRecord.Status.SUCCESS, progress=100)
-        TaskRecord.objects.create(task_type="heavy_ping", status=TaskRecord.Status.RUNNING, progress=10)
+        TaskRecord.objects.create(created_by=self.user, task_type="fast_ping", status=TaskRecord.Status.SUCCESS, progress=100)
+        TaskRecord.objects.create(created_by=self.user, task_type="heavy_ping", status=TaskRecord.Status.RUNNING, progress=10)
 
         response = self.client.get("/api/tasks/?status=running")
 
@@ -51,7 +56,7 @@ class TaskApiTests(TestCase):
         self.assertEqual(payload["results"][0]["task_type"], "heavy_ping")
 
     def test_retrieves_task_detail(self) -> None:
-        task = TaskRecord.objects.create(
+        task = TaskRecord.objects.create(created_by=self.user,
             task_type="paper_light_process",
             status=TaskRecord.Status.FAILED,
             progress=100,
@@ -68,20 +73,20 @@ class TaskApiTests(TestCase):
         self.assertEqual(payload["error"], "PDF text extraction failed")
 
     def test_status_endpoint_returns_requested_tasks_and_adaptive_poll_delay(self) -> None:
-        pending = TaskRecord.objects.create(
+        pending = TaskRecord.objects.create(created_by=self.user,
             task_type="deep_process_paper",
             status=TaskRecord.Status.PENDING,
             progress=0,
             stage="queued",
         )
-        running = TaskRecord.objects.create(
+        running = TaskRecord.objects.create(created_by=self.user,
             task_type="paper_ai_light_process",
             status=TaskRecord.Status.RUNNING,
             progress=50,
             stage="ai_light_profile",
         )
         TaskRecord.objects.filter(pk=running.pk).update(updated_at=timezone.now() - timedelta(seconds=45))
-        finished = TaskRecord.objects.create(
+        finished = TaskRecord.objects.create(created_by=self.user,
             task_type="fast_ping",
             status=TaskRecord.Status.SUCCESS,
             progress=100,
@@ -96,7 +101,7 @@ class TaskApiTests(TestCase):
         self.assertEqual(payload["next_poll_after_ms"], 1000)
 
     def test_status_endpoint_stops_polling_when_requested_tasks_are_terminal(self) -> None:
-        finished = TaskRecord.objects.create(
+        finished = TaskRecord.objects.create(created_by=self.user,
             task_type="fast_ping",
             status=TaskRecord.Status.SUCCESS,
             progress=100,

@@ -12,6 +12,8 @@ export type ExperimentProject = {
   space_path?: string | null;
   status: 'planned' | 'running' | 'completed' | 'blocked' | 'archived';
   owner: number | null;
+  visibility: 'private' | 'team';
+  can_edit: boolean;
   owner_username?: string | null;
   objective: string;
   protocol_markdown: string;

@@ -102,7 +102,7 @@ export function PaperReadingPanel({ paper }: { paper: Paper }) {
     const experiment = payload as ExperimentListResponse['results'][number];
     setExperiments((current) => [experiment, ...current]);
     await updateState({ reproduction_status: 'planned', next_step: nextStep || '建立复现实验项目并补充实验协议。' });
-    setMessage('复现实验项目已创建。');
+    setMessage('复现实验项目已创建，仅本人可见。');
     setSaving(false);
   };
 

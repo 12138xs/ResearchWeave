@@ -9,7 +9,7 @@ from rest_framework.views import APIView
 
 from apps.common.permissions import ReadOnlyOrAuthenticatedWriteMixin
 from apps.experiments.models import ExperimentProject, ExperimentRun
-from apps.experiments.selectors import experiment_queryset
+from apps.experiments.selectors import accessible_experiments
 from apps.experiments.serializers import ExperimentProjectSerializer, ExperimentRunSerializer
 from apps.experiments.services import create_experiment_run, enqueue_experiment_run
 from apps.tasks.serializers import TaskRecordSerializer
@@ -21,7 +21,7 @@ class ExperimentListView(ReadOnlyOrAuthenticatedWriteMixin, ListCreateAPIView):
     max_page_size = 100
 
     def get_queryset(self):
-        return experiment_queryset(self.request.query_params)
+        return accessible_experiments(self.request.user, params=self.request.query_params)
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user if self.request.user.is_authenticated else None)
@@ -42,16 +42,17 @@ class ExperimentDetailView(ReadOnlyOrAuthenticatedWriteMixin, RetrieveUpdateAPIV
     serializer_class = ExperimentProjectSerializer
 
     def get_queryset(self):
-        return experiment_queryset(self.request.query_params)
+        return accessible_experiments(self.request.user, params=self.request.query_params,
+                                      write=self.request.method not in {"GET", "HEAD", "OPTIONS"})
 
 
 class ExperimentRunListView(ReadOnlyOrAuthenticatedWriteMixin, APIView):
     def get(self, request, pk: int):
-        project = get_object_or_404(ExperimentProject, pk=pk)
+        project = get_object_or_404(accessible_experiments(request.user), pk=pk)
         return Response(ExperimentRunSerializer(project.runs.all(), many=True).data)
 
     def post(self, request, pk: int):
-        project = get_object_or_404(ExperimentProject, pk=pk)
+        project = get_object_or_404(accessible_experiments(request.user, write=True), pk=pk)
         serializer = ExperimentRunSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         run = create_experiment_run(project, serializer.validated_data, user=request.user)
@@ -63,12 +64,15 @@ class ExperimentRunDetailView(ReadOnlyOrAuthenticatedWriteMixin, RetrieveUpdateA
     lookup_url_kwarg = "run_id"
 
     def get_queryset(self):
-        return ExperimentRun.objects.select_related("project", "created_by")
+        projects = accessible_experiments(self.request.user,
+                                         write=self.request.method not in {"GET", "HEAD", "OPTIONS"})
+        return ExperimentRun.objects.select_related("project", "created_by").filter(project__in=projects)
 
 
 class ExperimentRunExecuteView(ReadOnlyOrAuthenticatedWriteMixin, APIView):
     def post(self, request, run_id: int):
-        run = get_object_or_404(ExperimentRun.objects.select_related("project"), pk=run_id)
+        run = get_object_or_404(ExperimentRun.objects.select_related("project").filter(
+            project__in=accessible_experiments(request.user, write=True)), pk=run_id)
         task = enqueue_experiment_run(run, user=request.user)
         run.refresh_from_db()
         return Response({"run": ExperimentRunSerializer(run).data, "task": TaskRecordSerializer(task).data}, status=202)

@@ -12,6 +12,7 @@ class CatalogApiTests(TestCase):
         self.client.login(username="member", password="member-password")
 
     def test_catalog_stats_returns_empty_totals(self) -> None:
+        self.login_member()
         response = self.client.get("/api/catalog/stats/")
 
         self.assertEqual(response.status_code, 200)
@@ -26,13 +27,15 @@ class CatalogApiTests(TestCase):
             },
         )
 
-    def test_papers_list_is_public_and_empty_initially(self) -> None:
+    def test_papers_list_requires_login_and_is_empty_initially(self) -> None:
+        self.login_member()
         response = self.client.get("/api/papers/")
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), [])
 
-    def test_documents_list_is_public_and_empty_initially(self) -> None:
+    def test_documents_list_requires_login_and_is_empty_initially(self) -> None:
+        self.login_member()
         response = self.client.get("/api/documents/")
 
         self.assertEqual(response.status_code, 200)

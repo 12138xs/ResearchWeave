@@ -10,6 +10,9 @@ from apps.assistant.models import AssistantSession
 from apps.experiments.models import ExperimentProject, ExperimentRun
 from apps.search.models import SearchIndexEntry
 from apps.tasks.models import TaskRecord
+from apps.library.models import KnowledgeSpace
+from apps.quality.models import QualityIssue
+from apps.research_map.models import DirectionMapSnapshot
 
 
 class ResearchAccessBoundaryTests(TestCase):
@@ -144,3 +147,51 @@ class ResearchAccessBoundaryTests(TestCase):
             "title": "新会话", "scope_json": {"experiment_ids": [self.project.pk]},
         }, content_type="application/json")
         self.assertEqual(response.status_code, 400)
+
+    def test_shared_scope_is_rechecked_after_access_is_revoked(self):
+        self.project.visibility = "team"
+        self.project.save()
+        session = AssistantSession.objects.create(title="之前可见", created_by=self.bob,
+                                                  scope_json={"experiment_ids": [self.project.pk]})
+        self.project.visibility = "private"
+        self.project.save()
+        self.login(self.bob)
+        response = self.client.post(f"/api/assistant/sessions/{session.pk}/messages/", {"question": "读取"})
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(session.exchanges.count(), 0)
+
+    def test_quality_and_map_snapshot_do_not_expose_private_experiments(self):
+        space = KnowledgeSpace.objects.create(name="测试主题")
+        self.project.space = space
+        self.project.save()
+        issue = QualityIssue.objects.create(object_type="experiment", object_id=self.project.pk,
+                                            dimension="completeness", notes="私密内容")
+        DirectionMapSnapshot.objects.create(root_space=space, version=1,
+                                            nodes_json=[{"id": space.pk, "experiment_count": 1}], edges_json=[])
+        self.login(self.bob)
+        self.assertEqual(self.client.get("/api/quality/issues/").json(), [])
+        self.assertEqual(self.client.patch(f"/api/quality/issues/{issue.pk}/", {"status": "resolved"},
+                                          content_type="application/json").status_code, 404)
+        response = self.client.get(f"/api/knowledge-spaces/{space.pk}/map/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["root"]["experiment_count"], 0)
+        self.assertEqual(response.json()["snapshot"]["nodes_json"][0]["experiment_count"], 0)
+
+    def test_owner_cannot_transfer_ownership_and_staff_cannot_read_private_records(self):
+        self.login()
+        response = self.client.patch(f"/api/experiments/{self.project.pk}/", {"owner": self.bob.pk},
+                                     content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        self.project.refresh_from_db()
+        self.assertEqual(self.project.owner_id, self.alice.pk)
+        self.bob.is_staff = True
+        self.bob.save()
+        self.login(self.bob)
+        self.assertEqual(self.client.get(f"/api/experiments/{self.project.pk}/").status_code, 404)
+
+    def test_authenticated_response_is_not_shared_cacheable(self):
+        self.login()
+        response = self.client.get("/api/experiments/")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("no-store", response["Cache-Control"])
+        self.assertIn("Cookie", response["Vary"])
