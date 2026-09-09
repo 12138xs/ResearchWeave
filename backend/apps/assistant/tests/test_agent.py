@@ -215,6 +215,9 @@ class LiveAgentTests(TestCase):
             choice = response.raw["choices"][0]
             print("Live response:", choice.get("finish_reason"), "content_chars=", len(response.content),
                   "tools=", len(choice["message"].get("tool_calls") or []), "tokens=", response.usage.get("total_tokens"))
+            if not choice["message"].get("tool_calls"):
+                # This opt-in test contains synthetic text only; never log reasoning or credentials.
+                print("Synthetic final output:", response.content[:6500])
             return response
         with patch("apps.assistant.agent.call_minimax_chat", side_effect=observe):
             run_exchange(exchange.pk, 1)
