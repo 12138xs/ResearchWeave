@@ -1006,7 +1006,7 @@ class PaperUploadTests(TestCase):
             self.assertEqual(response["Content-Type"], "application/pdf")
             self.assertIn("inline", response["Content-Disposition"])
             self.assertEqual(response["X-Frame-Options"], "SAMEORIGIN")
-            response.close()
+            b"".join(response.streaming_content)
 
     def test_download_filename_uses_current_title_not_stale_slug(self) -> None:
         with TemporaryDirectory() as tmpdir:
@@ -1026,7 +1026,7 @@ class PaperUploadTests(TestCase):
                 self.assertIn("fourier-neural-operator-for-parametric-pdes.pdf", response["Content-Disposition"])
                 self.assertNotIn("paper-upload.pdf", response["Content-Disposition"])
             finally:
-                response.close()
+                b"".join(response.streaming_content)
 
     def test_keyword_aliases_are_serialized_once(self) -> None:
         pinn = Keyword.objects.create(name="PINN")

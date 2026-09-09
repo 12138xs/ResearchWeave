@@ -52,4 +52,4 @@ class ImageUploadTests(TestCase):
 
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response["Content-Type"], "image/png")
-            response.close()
+            self.assertEqual(b"".join(response.streaming_content), image_path.read_bytes())
