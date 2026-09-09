@@ -16,7 +16,7 @@ from apps.tasks.models import TaskRecord
 
 
 def reply(answer=None, calls=None):
-    message = {"role": "assistant", "content": json.dumps(answer) if answer else "", "reasoning_details": [{"text": "private reasoning"}]}
+    message = {"role": "assistant", "content": answer["answer"] if answer else "", "reasoning_details": [{"text": "private reasoning"}]}
     if calls:
         message["tool_calls"] = calls
     return SimpleNamespace(content=message["content"], usage={"total_tokens": 10}, raw={"choices": [{"message": message}]})
@@ -57,6 +57,14 @@ class AgentTests(TestCase):
         self.exchange.refresh_from_db()
         self.assertEqual(self.exchange.status, "failed")
         self.assertEqual(self.exchange.answer, "")
+
+    @patch("apps.assistant.agent.call_minimax_chat")
+    def test_quoted_prose_needs_no_model_generated_json(self, model):
+        model.side_effect = [search(), reply({"answer": '材料写有 "PDE residual" [S1]。\n建议：先验证。'})]
+        run_exchange(self.exchange.pk, 1)
+        self.exchange.refresh_from_db()
+        self.assertEqual(self.exchange.status, "completed")
+        self.assertIn('"PDE residual"', self.exchange.answer)
 
     @patch("apps.assistant.agent.call_minimax_chat")
     def test_no_match_has_deterministic_insufficient_answer(self, model):
@@ -215,9 +223,6 @@ class LiveAgentTests(TestCase):
             choice = response.raw["choices"][0]
             print("Live response:", choice.get("finish_reason"), "content_chars=", len(response.content),
                   "tools=", len(choice["message"].get("tool_calls") or []), "tokens=", response.usage.get("total_tokens"))
-            if not choice["message"].get("tool_calls"):
-                # This opt-in test contains synthetic text only; never log reasoning or credentials.
-                print("Synthetic final output:", response.content[:6500])
             return response
         with patch("apps.assistant.agent.call_minimax_chat", side_effect=observe):
             run_exchange(exchange.pk, 1)
