@@ -139,11 +139,12 @@ def parse_version(version_id):
             return
         TaskRecord.objects.filter(pk=version.task_id).update(status="running", stage="提取证据", updated_at=timezone.now())
         try:
-            rows, warnings = _extract(version)
+            with transaction.atomic():
+                rows, warnings = _extract(version)
+                Evidence.objects.bulk_create(rows)
         except Exception:
             fail(version, "未能完整解析。请检查文件是否损坏、加密、采用 UTF-8 编码，或超过 500 页及文本上限；原文件仍可下载。")
             return
-        Evidence.objects.bulk_create(rows)
         version.status = "needs_review" if warnings else "ready"
         version.warnings = warnings
         version.error = ""

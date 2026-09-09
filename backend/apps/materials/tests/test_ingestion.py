@@ -94,6 +94,9 @@ class IngestionTests(TestCase):
         self.assertEqual(version.status, "needs_review")
         self.assertEqual(list(version.evidence.values_list("page", flat=True)), [1, 2])
         self.assertTrue(all(row.review_required for row in version.evidence.all()))
+        evidence = version.evidence.first()
+        url = f"/api/materials/{version.material_id}/versions/{version.pk}/evidence/{evidence.pk}/review/"
+        self.assertEqual(self.client.post(url, {"confirmed": True}, content_type="application/json").status_code, 400)
 
     def test_invalid_utf8_and_corrupt_pdf_fail_visibly_without_partial_evidence(self):
         for body, name in [(b"\xff\xfe", "bad.md"), (b"%PDF-broken", "bad.pdf")]:
@@ -194,6 +197,19 @@ class IngestionTests(TestCase):
         version.refresh_from_db()
         self.assertEqual(version.status, "failed")
         self.assertEqual(version.evidence.count(), 0)
+
+    def test_evidence_write_failure_is_atomic_and_can_recover(self):
+        from django.db import DatabaseError
+        version, _ = self.upload()
+        with patch("apps.materials.services.Evidence.objects.bulk_create", side_effect=DatabaseError("write failed")):
+            parse_version(version.pk)
+        version.refresh_from_db()
+        self.assertEqual(version.status, "failed")
+        self.assertEqual(version.evidence.count(), 0)
+        parse_version(version.pk)
+        version.refresh_from_db()
+        self.assertEqual(version.status, "ready")
+        self.assertEqual(version.evidence.count(), 1)
 
 
 class ConcurrentIngestionTests(TransactionTestCase):
