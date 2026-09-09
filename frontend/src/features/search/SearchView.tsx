@@ -5,6 +5,7 @@ import { enqueueSearchReindex } from '../../api/search';
 import { Header } from '../../components/Header';
 import { useApiData } from '../../app/hooks';
 import type { SearchResponse } from './types';
+import { EvidenceResults } from './EvidenceResults';
 
 const emptySearch: SearchResponse = {
   count: 0,
@@ -23,7 +24,7 @@ export function SearchView() {
   const [params, setParams] = useSearchParams();
   const [query, setQuery] = useState(params.get('q') ?? '');
   const [message, setMessage] = useState('');
-  const searchUrl = useMemo(() => `/api/search/?${new URLSearchParams(params).toString()}`, [params]);
+  const searchUrl = useMemo(() => params.get('scope') === 'materials' ? '' : `/api/search/?${new URLSearchParams(params).toString()}`, [params]);
   const { data, loading, error } = useApiData<SearchResponse>(searchUrl, emptySearch);
   const submit = () => {
     const next = new URLSearchParams(params);
@@ -38,7 +39,7 @@ export function SearchView() {
   };
   return (
     <main className="page search-page">
-      <Header eyebrow="" title="统一检索" description="搜索论文、文档和复现实验。" />
+      <Header eyebrow="" title="统一检索" description="查找材料原文证据，以及已有论文、文档和复现实验。" />
       <section className="search-command-panel">
         <div className="search-command-main">
           <label>
@@ -64,22 +65,24 @@ export function SearchView() {
               }}
             >
               <option value="">全部内容</option>
+              <option value="materials">研究材料原文</option>
               <option value="paper">论文</option>
               <option value="document">文档</option>
               <option value="experiment">实验</option>
             </select>
           </label>
           <button type="button" onClick={submit}>检索</button>
-          <button type="button" className="secondary-button" onClick={reindex}>重建索引</button>
+          {params.get('scope') !== 'materials' && <button type="button" className="secondary-button" onClick={reindex}>重建旧资料索引</button>}
         </div>
         {(data.count > 0 || params.get('q') || message) && <div className="search-command-meta">
-          <span>{data.count ? `找到 ${data.count} 条结果` : params.get('q') ? '没有匹配结果' : '等待输入关键词'}</span>
+          <span>{params.get('scope') === 'materials' ? '材料证据直接读取，无需重建旧资料索引' : data.count ? `旧资料找到 ${data.count} 条结果` : '旧资料暂无匹配结果'}</span>
           {message && <strong>{message} <Link to="/tasks">打开任务队列</Link></strong>}
         </div>}
       </section>
+      {(!params.get('scope') || params.get('scope') === 'materials') && <EvidenceResults query={params.get('q') ?? ''} />}
       {loading && <p className="muted">正在检索...</p>}
       {error && <p className="error-text">检索服务暂时不可用。</p>}
-      <section className="search-results" aria-label="检索结果">
+      {params.get('scope') !== 'materials' && <section className="search-results" aria-label="旧资料检索结果">
         {data.results.map((entry) => (
           <article className="search-result-row" key={`${entry.object_type}-${entry.object_id}`}>
             <div className="search-result-type">{typeLabels[entry.object_type] ?? entry.object_type}</div>
@@ -103,7 +106,7 @@ export function SearchView() {
             </div>
           </article>
         )}
-      </section>
+      </section>}
     </main>
   );
 }

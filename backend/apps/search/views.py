@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.search.selectors import search_entries
+from apps.search.evidence import search_evidence
 from apps.search.serializers import SearchIndexEntrySerializer
 from apps.search.services import enqueue_search_reindex
 from apps.tasks.serializers import TaskRecordSerializer
@@ -33,3 +34,10 @@ class SearchReindexView(APIView):
     def post(self, request):
         task = enqueue_search_reindex(request.user)
         return Response({"task": TaskRecordSerializer(task).data}, status=status.HTTP_202_ACCEPTED)
+
+
+class EvidenceSearchView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        return Response(search_evidence(request.user, request.query_params))

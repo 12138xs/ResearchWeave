@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 
 import { submitMaterial as submit } from '../../api/materials';
 import { useApiData } from '../../app/hooks';
@@ -81,6 +81,11 @@ export function MaterialsView() {
 
 function VersionEvidence({ material, version, reload, refresh }: { material: Material; version: Version; reload: number; refresh: () => void }) {
   const { data, loading, error } = useApiData<Detail | null>(`/api/materials/${material.id}/versions/${version.id}/?reload=${reload}`, null);
+  useEffect(() => {
+    if (data && window.location.hash.startsWith('#evidence-')) {
+      document.getElementById(window.location.hash.slice(1))?.scrollIntoView();
+    }
+  }, [data]);
   const [message, setMessage] = useState('');
   const [title, setTitle] = useState('');
   const [markdown, setMarkdown] = useState('');
@@ -156,7 +161,8 @@ function VersionEvidence({ material, version, reload, refresh }: { material: Mat
 export function MaterialDetailView() {
   const { id } = useParams();
   const [reload, setReload] = useState(0);
-  const [selected, setSelected] = useState<number | null>(null);
+  const [params, setParams] = useSearchParams();
+  const selected = Number(params.get('version')) || null;
   const { data, loading, error } = useApiData<Material>(`/api/materials/${id}/?reload=${reload}`, emptyMaterial);
   const refresh = () => setReload((value) => value + 1);
   const version = data.versions.find((item) => item.id === selected) ?? data.versions[0];
@@ -167,7 +173,7 @@ export function MaterialDetailView() {
     {!loading && !error && <>
       {data.can_edit && <Upload material={data} onComplete={refresh} />}
       <div className="inline-actions">
-        <label>原文件版本<select value={version?.id ?? ''} onChange={(event) => setSelected(Number(event.target.value))}>
+        <label>原文件版本<select value={version?.id ?? ''} onChange={(event) => setParams({ version: event.target.value })}>
           {data.versions.map((item) => <option key={item.id} value={item.id}>版本 {item.number} · {labels[item.status]}</option>)}
         </select></label>
         <button type="button" onClick={refresh}>刷新状态</button>
