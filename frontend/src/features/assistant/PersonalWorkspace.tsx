@@ -22,13 +22,17 @@ export function PersonalWorkspace({ revision }: { revision: number }) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const pendingPublication = useRef<{ key: string; id: string } | null>(null);
+  const profileLoaded = useRef(false);
 
   const refreshEntries = async () => setEntries(await workspaceRequest<PersonalEntry[]>('workspace/entries/'));
   const refreshPublications = async () => setPublications(await workspaceRequest<Publication[]>('publications/'));
   useEffect(() => {
     let cancelled = false;
     Promise.all([workspaceRequest<PersonalProfile>('workspace/profile/'), workspaceRequest<PersonalEntry[]>('workspace/entries/'), workspaceRequest<Publication[]>('publications/')])
-      .then(([p, e, shares]) => { if (!cancelled) { setProfile(p); setEntries(e); setPublications(shares); } })
+      .then(([p, e, shares]) => { if (!cancelled) {
+        if (!profileLoaded.current) { setProfile(p); profileLoaded.current = true; }
+        setEntries(e); setPublications(shares);
+      } })
       .catch((reason: unknown) => { if (!cancelled) setMessage(reason instanceof Error ? reason.message : '加载失败'); });
     return () => { cancelled = true; };
   }, [revision]);
@@ -67,14 +71,14 @@ export function PersonalWorkspace({ revision }: { revision: number }) {
     <textarea aria-label="个人 Agent 风格" maxLength={2000} value={profile.style} onChange={(event) => setProfile({ ...profile, style: event.target.value })} placeholder="例如：先解释 AI 基础概念，再讨论数学假设与实验验证。" />
     <label><input type="checkbox" checked={profile.memory_enabled} onChange={(event) => setProfile({ ...profile, memory_enabled: event.target.checked })} />在回答中使用已启用 memory</label>
     <button type="button" disabled={busy} onClick={() => perform(async () => { setProfile(await workspaceRequest<PersonalProfile>('workspace/profile/', 'PATCH', profile)); setMessage('个人设置已保存，新问题按新设置执行。'); })}>保存设置</button>
-    <p><a href="/api/assistant/workspace/export/">导出我的工作区 Markdown</a></p>
+    <p><a href="/api/assistant/workspace/export/">导出整个工作区</a> · <a href="/api/assistant/workspace/export/?section=style">风格 Markdown</a> · <a href="/api/assistant/workspace/export/?section=memory">Memory Markdown</a></p>
     <div className="toolbar"><button type="button" onClick={() => reset('note')}>新实验记录</button><button type="button" onClick={() => reset('memory')}>新增 memory</button></div>
     <h3>{editing ? '编辑' : '新建'}{kind === 'note' ? '实验记录' : '个人记忆'}</h3>
     <input aria-label="记录标题" maxLength={240} value={title} onChange={(event) => setTitle(event.target.value)} placeholder="标题" />
     <textarea aria-label="记录正文" maxLength={kind === 'memory' ? 500 : 12000} value={body} onChange={(event) => setBody(event.target.value)} />
     {kind === 'note' && <select aria-label="记录阶段" value={status} onChange={(event) => setStatus(event.target.value as PersonalEntry['status'])}><option value="planned">计划</option><option value="observed">观察</option><option value="concluded">结论</option></select>}
     <input aria-label="来源会话" value={source} onChange={(event) => setSource(event.target.value)} placeholder="可选：本人来源会话编号；清空表示解除关联" />
-    <p className="muted">删除来源会话时，关联 memory 会一并删除；解除关联后保留。删除 memory 停止后续使用，不自动删除已存在的历史回答。</p>
+    <p className="muted">删除来源会话时，关联 memory 会一并删除；解除关联后保留。删除 memory 停止后续使用，不自动删除已保存日志或历史回答。</p>
     <button type="button" disabled={busy || !title.trim() || !body.trim()} onClick={save}>保存个人记录</button>
     {entries.map((entry) => <article className="source-preview" key={entry.id}>
       <strong>{entry.kind === 'memory' ? 'Memory' : '实验记录'} #{entry.id} · {entry.title}</strong>

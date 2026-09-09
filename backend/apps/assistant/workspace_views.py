@@ -3,6 +3,7 @@ from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.exceptions import ValidationError
 
 from apps.assistant.models import PersonalEntry, PersonalProfile, ResearchPublication
 from apps.assistant.workspace import publish_entry, save_entry, save_profile
@@ -84,9 +85,19 @@ class WorkspaceExportView(APIView):
 
     def get(self, request):
         profile = PersonalProfile.objects.filter(owner=request.user).first()
-        text = "# 我的研究工作区\n\n## Agent 风格\n\n" + (profile.style if profile else "")
-        for row in PersonalEntry.objects.filter(owner=request.user):
+        section = request.query_params.get("section", "all")
+        if section not in ["all", "style", "memory", "note"]:
+            raise ValidationError("导出范围不合法。")
+        text = "# 我的研究工作区\n"
+        if section in ["all", "style"]:
+            text += "\n## Agent 风格\n\n" + (profile.style if profile else "")
+        entries = PersonalEntry.objects.filter(owner=request.user)
+        if section == "style":
+            entries = entries.none()
+        elif section != "all":
+            entries = entries.filter(kind=section)
+        for row in entries:
             text += f"\n\n## {row.title}\n\n类型：{row.kind}；启用：{row.enabled}；状态：{row.status}；来源会话：{row.source_session_id or '手动'}\n\n{row.body}"
         response = HttpResponse(text, content_type="text/markdown; charset=utf-8")
-        response["Content-Disposition"] = 'attachment; filename="my-research-workspace.md"'
+        response["Content-Disposition"] = f'attachment; filename="my-research-{section}.md"'
         return response

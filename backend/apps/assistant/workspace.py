@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from django.shortcuts import get_object_or_404
 from rest_framework.exceptions import ValidationError
 
 from apps.assistant.models import AssistantSession, PersonalEntry, PersonalProfile, ResearchPublication
@@ -21,7 +22,10 @@ def save_entry(user, data, instance=None):
     with transaction.atomic():
         get_user_model().objects.select_for_update().get(pk=user.pk)
         if instance:
-            instance = PersonalEntry.objects.select_for_update().get(pk=instance.pk, owner=user)
+            instance = get_object_or_404(PersonalEntry.objects.select_for_update(), pk=instance.pk, owner=user)
+        source = data.get("source_session")
+        if source is not None and not AssistantSession.objects.filter(pk=source.pk, created_by=user).exists():
+            raise ValidationError("来源会话不存在或不可访问。")
         kind = data.get("kind", instance.kind if instance else None)
         enabled = data.get("enabled", instance.enabled if instance else True)
         if kind == "memory" and enabled:
@@ -42,7 +46,7 @@ def publish_entry(user, entry, data):
     values = {key: value for key, value in data.items() if key != "reviewed"}
     with transaction.atomic():
         get_user_model().objects.select_for_update().get(pk=user.pk)
-        PersonalEntry.objects.select_for_update().get(pk=entry.pk, owner=user, kind="note")
+        get_object_or_404(PersonalEntry.objects.select_for_update(), pk=entry.pk, owner=user, kind="note")
         previous = ResearchPublication.objects.filter(owner=user, request_id=data["request_id"]).first()
         if previous:
             if previous.source_entry_id != entry.pk or any(getattr(previous, key) != value for key, value in values.items()):
