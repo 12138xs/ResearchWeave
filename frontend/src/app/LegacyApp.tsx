@@ -17,6 +17,7 @@ import { SearchView } from '../features/search/SearchView';
 import { SettingsView } from '../features/settings/SettingsView';
 import { AssistantView } from '../features/assistant/AssistantView';
 import { ExperimentsView, ExperimentDetailView } from '../features/experiments/ExperimentsView';
+import { MaterialsView, MaterialDetailView } from '../features/materials/MaterialsView';
 import { PaperReadingPanel } from '../features/papers/PaperReadingPanel';
 import { QualityIssuesView } from '../features/quality/QualityIssuesView';
 import { KnowledgeSpaceMapView } from '../features/research_map/KnowledgeSpaceMapView';
@@ -2956,6 +2957,8 @@ export function LegacyApp() {
         <Route path="/docs/new" element={<NewDocument />} />
         <Route path="/docs/:id" element={<DocumentDetail />} />
         <Route path="/experiments" element={<ExperimentsView />} />
+        <Route path="/materials" element={<MaterialsView />} />
+        <Route path="/materials/:id" element={<MaterialDetailView />} />
         <Route path="/experiments/:id" element={<ExperimentDetailView />} />
         <Route path="/knowledge-spaces" element={<KnowledgeSpaceManager />} />
         <Route path="/knowledge-spaces/:id" element={<KnowledgeSpaceMapView />} />

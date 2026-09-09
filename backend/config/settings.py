@@ -100,6 +100,7 @@ INSTALLED_APPS = [
     "apps.research_map",
     "apps.tasks",
     "apps.storage",
+    "apps.materials",
     "apps.exports",
 ]
 

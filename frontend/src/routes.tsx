@@ -20,6 +20,7 @@ export const navGroups: NavGroup[] = [
   {
     label: '核心工作',
     routes: [
+      { path: '/materials', label: '研究材料', description: '原文与证据' },
       { path: '/papers', label: '论文库', description: '阅读与复现' },
       { path: '/docs', label: '知识文档', description: '团队沉淀' }
     ]

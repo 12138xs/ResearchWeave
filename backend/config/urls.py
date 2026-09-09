@@ -31,6 +31,7 @@ urlpatterns = [
     path("api/", include("apps.documents.urls")),
     path("api/", include("apps.ai.urls")),
     path("api/", include("apps.storage.urls")),
+    path("api/", include("apps.materials.urls")),
     path("api/", include("apps.tasks.urls")),
     path("api/", include("apps.experiments.urls")),
     path("api/", include("apps.search.urls")),
