@@ -8,6 +8,7 @@ from rest_framework.views import APIView
 
 from apps.search.selectors import search_entries
 from apps.search.evidence import search_evidence
+from apps.search.assisted import assisted_search
 from apps.search.serializers import SearchIndexEntrySerializer
 from apps.search.services import enqueue_search_reindex
 from apps.tasks.serializers import TaskRecordSerializer
@@ -41,3 +42,10 @@ class EvidenceSearchView(APIView):
 
     def get(self, request):
         return Response(search_evidence(request.user, request.query_params))
+
+
+class AssistedEvidenceSearchView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        return Response(assisted_search(request.user, request.data))

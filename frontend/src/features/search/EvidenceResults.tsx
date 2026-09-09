@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
+import { useState } from 'react';
 
-import { evidenceSearchUrl } from '../../api/search';
+import { assistEvidenceSearch, evidenceSearchUrl } from '../../api/search';
 import { useApiData } from '../../app/hooks';
 
 type EvidenceResult = {
@@ -8,19 +9,41 @@ type EvidenceResult = {
   page: number | null; line_start: number | null; line_end: number | null;
   review_required: boolean; reviewed_at: string | null; excerpt: string; file_url: string; url: string;
 };
-type EvidenceResponse = { notice: string; candidate_limit_reached: boolean; results: EvidenceResult[] };
+type EvidenceResponse = { notice: string; candidate_limit_reached: boolean; results: EvidenceResult[]; expanded_queries?: string[] };
 const empty: EvidenceResponse = { notice: '', candidate_limit_reached: false, results: [] };
 
 export function EvidenceResults({ query }: { query: string }) {
   const { data, loading, error } = useApiData<EvidenceResponse>(evidenceSearchUrl(query), empty);
+  const [assisted, setAssisted] = useState<EvidenceResponse | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState('');
+  const shown = assisted ?? data;
+  const enhance = async () => {
+    setBusy(true);
+    setMessage('');
+    try {
+      setAssisted(await assistEvidenceSearch(query));
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : '增强检索暂不可用。');
+    } finally {
+      setBusy(false);
+    }
+  };
   if (!query.trim()) return null;
   return <section className="search-results" aria-label="材料原文证据">
     <h2>材料原文证据</h2>
     <p>检索最新可用版本，每份材料最多展示两条证据。更多上下文可打开材料查看。</p>
+    <div className="inline-actions">
+      <button type="button" disabled={busy || loading || error} onClick={enhance}>{busy ? '正在扩展术语与筛选证据…' : '增强检索'}</button>
+      {assisted && <button type="button" disabled={busy} onClick={() => setAssisted(null)}>查看关键词结果</button>}
+    </div>
+    <p className="muted">增强检索使用 MiniMax M3，会发送本次问题及最多 12 段可见材料摘录，消耗现有接口额度。</p>
+    {message && <p role="alert">{message}</p>}
     {loading ? <p>正在查找原文…</p> : error ? <p role="alert">无法检索，请使用 1–500 字的文字关键词。</p> : <>
-      <p>{data.notice}</p>
-      {data.candidate_limit_reached && <p>匹配范围较广，候选数量达到上限，请补充更具体的关键词。</p>}
-      {data.results.map((result) => <article className="search-result-row" key={result.evidence_id}>
+      <p role="status">{shown.notice}</p>
+      {shown.expanded_queries && <p>扩展术语：{shown.expanded_queries.join('；')}</p>}
+      {shown.candidate_limit_reached && <p>匹配范围较广，候选数量达到上限，请补充更具体的关键词。</p>}
+      {shown.results.map((result) => <article className="search-result-row" key={result.evidence_id}>
         <div className="search-result-content">
           <h3><Link to={result.url}>{result.title}</Link></h3>
           <p>版本 {result.version_number} · {result.page ? `第 ${result.page} 页` : `第 ${result.line_start}–${result.line_end} 行`} · {result.reviewed_at ? '已人工核对' : result.review_required ? '待核对原文' : '已提取文本'}</p>
@@ -31,7 +54,7 @@ export function EvidenceResults({ query }: { query: string }) {
           </div>
         </div>
       </article>)}
-      {!data.results.length && <p>未找到匹配的材料证据。可换用具体术语，或先加入并解析相关材料。</p>}
+      {!shown.results.length && <p>未找到匹配的材料证据。可换用具体术语，或先加入并解析相关材料。</p>}
     </>}
   </section>;
 }

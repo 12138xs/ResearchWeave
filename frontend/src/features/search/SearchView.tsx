@@ -79,7 +79,7 @@ export function SearchView() {
           {message && <strong>{message} <Link to="/tasks">打开任务队列</Link></strong>}
         </div>}
       </section>
-      {(!params.get('scope') || params.get('scope') === 'materials') && <EvidenceResults query={params.get('q') ?? ''} />}
+      {(!params.get('scope') || params.get('scope') === 'materials') && <EvidenceResults key={params.get('q') ?? ''} query={params.get('q') ?? ''} />}
       {loading && <p className="muted">正在检索...</p>}
       {error && <p className="error-text">检索服务暂时不可用。</p>}
       {params.get('scope') !== 'materials' && <section className="search-results" aria-label="旧资料检索结果">

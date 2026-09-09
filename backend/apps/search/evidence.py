@@ -50,10 +50,7 @@ def search_evidence(user, params):
     if scoped:
         get_object_or_404(allowed, pk=scoped)
         allowed = allowed.filter(pk=scoped)
-    latest = MaterialVersion.objects.filter(material_id=OuterRef("version__material_id"),
-        status__in=["ready", "needs_review"]).order_by("-number").values("pk")[:1]
-    sources = Evidence.objects.filter(version__material_id__in=allowed.values("pk"),
-        version_id=Subquery(latest)).exclude(text="").select_related("version__material")
+    sources = visible_evidence(user).filter(version__material_id__in=allowed.values("pk"))
     match = Q()
     rank = Value(0, output_field=IntegerField())
     for term in terms:
@@ -84,7 +81,14 @@ def search_evidence(user, params):
             break
     return {
         "mode": "keyword", "degraded": values["mode"] == "hybrid",
-        "notice": "向量检索尚未接通，当前按关键词匹配原文证据。",
+        "notice": "当前按关键词匹配原文证据；可点击增强检索扩展术语并筛选证据。",
         "candidate_limit_reached": len(candidates) > 500,
         "results": results,
     }
+
+
+def visible_evidence(user):
+    latest = MaterialVersion.objects.filter(material_id=OuterRef("version__material_id"),
+        status__in=["ready", "needs_review"]).order_by("-number").values("pk")[:1]
+    return Evidence.objects.filter(version__material_id__in=materials(user).values("pk"),
+        version_id=Subquery(latest)).exclude(text="").select_related("version__material")
