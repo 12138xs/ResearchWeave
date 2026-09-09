@@ -18,7 +18,7 @@ class ResearchAccessBoundaryTests(TestCase):
         cls.alice = get_user_model().objects.create_user(username="alice")
         cls.bob = get_user_model().objects.create_user(username="bob")
         cls.project = ExperimentProject.objects.create(title="个人实验", owner=cls.alice)
-        cls.run = ExperimentRun.objects.create(project=cls.project, created_by=cls.alice, notes="私密观察")
+        cls.experiment_run = ExperimentRun.objects.create(project=cls.project, created_by=cls.alice, notes="私密观察")
 
     def login(self, user=None):
         self.client.force_login(user or self.alice)
@@ -46,24 +46,24 @@ class ResearchAccessBoundaryTests(TestCase):
     def test_owner_can_read_and_update_project_and_run(self):
         self.login()
         self.assertEqual(self.client.get(f"/api/experiments/{self.project.pk}/").status_code, 200)
-        response = self.client.patch(f"/api/experiments/runs/{self.run.pk}/", {
+        response = self.client.patch(f"/api/experiments/runs/{self.experiment_run.pk}/", {
             "notes": "已更新", "created_by": self.bob.pk,
         }, content_type="application/json")
         self.assertEqual(response.status_code, 200)
-        self.run.refresh_from_db()
-        self.assertEqual(self.run.notes, "已更新")
-        self.assertEqual(self.run.created_by_id, self.alice.pk)
+        self.experiment_run.refresh_from_db()
+        self.assertEqual(self.experiment_run.notes, "已更新")
+        self.assertEqual(self.experiment_run.created_by_id, self.alice.pk)
 
     def test_other_member_cannot_list_read_write_or_execute_private_experiment(self):
         self.login(self.bob)
         self.assertEqual(self.client.get("/api/experiments/").json()["count"], 0)
         urls = [f"/api/experiments/{self.project.pk}/", f"/api/experiments/{self.project.pk}/runs/",
-                f"/api/experiments/runs/{self.run.pk}/"]
+                f"/api/experiments/runs/{self.experiment_run.pk}/"]
         for url in urls:
             with self.subTest(url=url):
                 self.assertEqual(self.client.get(url).status_code, 404)
         with patch("apps.experiments.views.enqueue_experiment_run") as enqueue:
-            response = self.client.post(f"/api/experiments/runs/{self.run.pk}/execute/")
+            response = self.client.post(f"/api/experiments/runs/{self.experiment_run.pk}/execute/")
             self.assertEqual(response.status_code, 404)
             enqueue.assert_not_called()
         self.assertEqual(self.client.patch(urls[0], {"owner": self.bob.pk},
@@ -95,7 +95,7 @@ class ResearchAccessBoundaryTests(TestCase):
 
     def test_task_result_and_polling_do_not_leak_other_members_data(self):
         task = TaskRecord.objects.create(task_type="experiment_run_execute", object_type="experiment_run",
-                                        object_id=self.run.pk, created_by=self.alice, result={"notes": "私密"})
+                                        object_id=self.experiment_run.pk, created_by=self.alice, result={"notes": "私密"})
         self.login(self.bob)
         self.assertEqual(self.client.get(f"/api/tasks/{task.pk}/").status_code, 404)
         self.assertEqual(self.client.get(f"/api/tasks/status/?ids={task.pk}").json()["tasks"], [])
