@@ -62,11 +62,15 @@ class AssistedSearchTests(TestCase):
     def test_permissions_rechecked_after_model_call(self, model):
         self.client.force_login(self.other)
         def choose(*args, **kwargs):
+            if model.call_count == 1:
+                return answer({"queries": ["PINN"]})
             self.material.visibility = "private"
             self.material.save()
             return answer({"evidence_ids": [self.evidence.pk]})
-        model.side_effect = [answer({"queries": ["PINN"]}), choose]
-        self.assertEqual(self.search("PINN").json()["results"], [])
+        model.side_effect = choose
+        result = self.search("PINN").json()
+        self.assertEqual(result["results"], [])
+        self.assertFalse(result["degraded"])
 
     @patch("apps.search.assisted.call_minimax_chat")
     def test_private_evidence_not_sent_to_another_user(self, model):
