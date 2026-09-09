@@ -5,7 +5,6 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.quality.models import QualityIssue
 from apps.quality.selectors import quality_issue_queryset
 from apps.quality.serializers import QualityIssueSerializer
 from apps.quality.services import enqueue_quality_audit

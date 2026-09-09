@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.common.permissions import ReadOnlyOrAuthenticatedWriteMixin
-from apps.experiments.models import ExperimentProject, ExperimentRun
+from apps.experiments.models import ExperimentRun
 from apps.experiments.selectors import accessible_experiments
 from apps.experiments.serializers import ExperimentProjectSerializer, ExperimentRunSerializer
 from apps.experiments.services import create_experiment_run, enqueue_experiment_run
