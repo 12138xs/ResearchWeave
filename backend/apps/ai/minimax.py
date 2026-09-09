@@ -27,12 +27,13 @@ class MiniMaxResponse:
 
 
 def call_minimax_chat(
-    messages: list[dict[str, str]],
+    messages: list[dict[str, Any]],
     *,
     model: str | None = None,
     temperature: float = 0.2,
     max_tokens: int | None = None,
     timeout: int | None = None,
+    tools: list[dict[str, Any]] | None = None,
 ) -> MiniMaxResponse:
     api_key = getattr(settings, "MODEL_GATEWAY_API_KEY", "")
     if not api_key:
@@ -49,6 +50,8 @@ def call_minimax_chat(
         "max_tokens": token_limit,
         "stream": False,
     }
+    if tools:
+        payload["tools"] = tools
     request = Request(
         f"{base_url}/chat/completions",
         data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
@@ -85,7 +88,7 @@ def call_minimax_chat(
         raise MiniMaxAPIError("MiniMax API returned no choices.")
     message = choices[0].get("message") or {}
     content = _strip_thinking(str(message.get("content") or "")).strip()
-    if not content:
+    if not content and not (tools and message.get("tool_calls")):
         raise MiniMaxAPIError("MiniMax API returned an empty answer.")
 
     return MiniMaxResponse(

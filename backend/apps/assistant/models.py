@@ -34,9 +34,16 @@ class AssistantExchange(models.Model):
     usage = models.JSONField(default=dict, blank=True)
     context_warning = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    request_id = models.UUIDField(null=True, blank=True)
+    status = models.CharField(max_length=20, default="completed")
+    attempt = models.PositiveIntegerField(default=1)
+    progress = models.CharField(max_length=240, blank=True)
+    error = models.TextField(blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ["created_at", "id"]
+        constraints = [models.UniqueConstraint(fields=["session", "request_id"], name="assistant_request_once")]
 
     def __str__(self) -> str:
         return f"{self.session_id}:{self.question[:60]}"

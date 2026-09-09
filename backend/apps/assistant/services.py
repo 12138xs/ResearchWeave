@@ -1,38 +1,64 @@
-from __future__ import annotations
+from datetime import timedelta
+
+from django.db import transaction
+from django.utils import timezone
+from rest_framework.exceptions import APIException
 
 from apps.assistant.models import AssistantExchange, AssistantSession
 
 
-def create_assistant_exchange(session: AssistantSession, question: str) -> AssistantExchange:
-    sources = _sources_from_scope(session.scope_json)
-    context_warning = "" if sources else "当前会话没有限定到具体来源，回答仅记录问题并提示补充范围。"
-    if sources:
-        source_labels = ", ".join(source["label"] for source in sources[:5])
-        answer = (
-            "已收到问题。第一版研究助理会严格限定在会话 scope 内组织回答；"
-            f"本次可用来源包括：{source_labels}。"
-        )
-    else:
-        answer = "请先在会话 scope 中限定论文、文档、实验或知识空间范围，再进行可靠问答。"
-    return AssistantExchange.objects.create(
-        session=session,
-        question=question,
-        answer=answer,
-        sources=sources,
-        model="scoped_stub_v1",
-        usage={"prompt_chars": len(question), "completion_chars": len(answer)},
-        context_warning=context_warning,
-    )
+class Conflict(APIException):
+    status_code = 409
+    default_detail = "当前会话已有进行中的问题，请等待或取消。"
 
 
-def _sources_from_scope(scope: dict) -> list[dict[str, object]]:
-    sources: list[dict[str, object]] = []
-    for key, label in [
-        ("paper_ids", "paper"),
-        ("document_ids", "document"),
-        ("experiment_ids", "experiment"),
-        ("space_ids", "space"),
-    ]:
-        for object_id in scope.get(key, []) or []:
-            sources.append({"type": label, "id": object_id, "label": f"{label}:{object_id}"})
-    return sources
+def _publish(exchange):
+    from apps.assistant.tasks import answer_question
+    try:
+        answer_question.apply_async(args=[exchange.pk, exchange.attempt], queue="ai_q", retry=False)
+    except Exception:
+        AssistantExchange.objects.filter(pk=exchange.pk, attempt=exchange.attempt, status="queued").update(
+            status="failed", error="暂时无法提交后台任务，请重试。", updated_at=timezone.now())
+
+
+def create_assistant_exchange(session, question, request_id):
+    with transaction.atomic():
+        AssistantSession.objects.select_for_update().get(pk=session.pk)
+        existing = session.exchanges.filter(request_id=request_id).first()
+        if existing:
+            if existing.question != question:
+                raise Conflict("同一请求编号不能用于不同问题。")
+            return existing
+        if session.exchanges.filter(status__in=["queued", "running"]).exists():
+            raise Conflict()
+        exchange = AssistantExchange.objects.create(session=session, question=question, request_id=request_id,
+            status="queued", progress="等待后台研究助理")
+        session.save(update_fields=["updated_at"])
+        transaction.on_commit(lambda: _publish(exchange))
+    exchange.refresh_from_db()
+    return exchange
+
+
+def control_exchange(exchange, action, attempt):
+    with transaction.atomic():
+        AssistantSession.objects.select_for_update().get(pk=exchange.session_id)
+        exchange = AssistantExchange.objects.select_for_update().get(pk=exchange.pk)
+        if exchange.attempt != attempt:
+            return exchange
+        if action == "cancel":
+            if exchange.status in ["queued", "running"]:
+                exchange.status, exchange.progress = "cancelled", "已取消；在途模型请求结束后丢弃结果"
+                exchange.save(update_fields=["status", "progress", "updated_at"])
+        elif action == "retry":
+            stale = exchange.updated_at < timezone.now() - timedelta(minutes=5)
+            if exchange.status not in ["failed", "cancelled"] and not (stale and exchange.status in ["queued", "running"]):
+                raise Conflict("任务尚在执行或已经完成。超过五分钟无进度时可重试。")
+            if exchange.session.exchanges.exclude(pk=exchange.pk).filter(status__in=["queued", "running"]).exists():
+                raise Conflict()
+            exchange.attempt += 1
+            exchange.status, exchange.error, exchange.progress = "queued", "", "等待重试"
+            exchange.answer, exchange.sources = "", []
+            exchange.save()
+            transaction.on_commit(lambda: _publish(exchange))
+    exchange.refresh_from_db()
+    return exchange

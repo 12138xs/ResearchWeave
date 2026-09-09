@@ -3,7 +3,12 @@ export type AssistantExchange = {
   session: number;
   question: string;
   answer: string;
-  sources: Array<Record<string, unknown>>;
+  sources: Array<{ label: string; title: string; location: string; excerpt: string; url: string; sha256: string }>;
+  status: 'queued' | 'running' | 'completed' | 'failed' | 'cancelled';
+  attempt: number;
+  progress: string;
+  error: string;
+  updated_at: string;
   model: string;
   usage: Record<string, unknown>;
   context_warning: string;

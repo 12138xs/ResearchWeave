@@ -7,12 +7,15 @@ from apps.experiments.selectors import accessible_experiments
 from apps.papers.models import Paper
 from apps.documents.models import Document
 from apps.library.models import KnowledgeSpace
+from apps.materials.selectors import materials
+from apps.assistant.knowledge import source_allowed
 
 
 def validate_scope(scope, user):
     if not isinstance(scope, dict):
         raise serializers.ValidationError("来源范围必须是对象。")
     sources = {
+        "material_ids": materials(user),
         "paper_ids": Paper.objects.all(), "document_ids": Document.objects.all(),
         "experiment_ids": accessible_experiments(user), "space_ids": KnowledgeSpace.objects.filter(is_active=True),
     }
@@ -27,12 +30,19 @@ def validate_scope(scope, user):
 
 
 class AssistantExchangeSerializer(serializers.ModelSerializer):
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if any(not source_allowed(source, instance.session.created_by) for source in instance.sources):
+            data.update(answer="部分引用已不可访问，历史回答已隐藏。", sources=[], context_warning="请重新检索当前可用材料。")
+        return data
+
     class Meta:
         model = AssistantExchange
         fields = [
             "id",
             "session",
             "question",
+            "request_id", "status", "attempt", "progress", "error", "updated_at",
             "answer",
             "sources",
             "model",
@@ -68,3 +78,4 @@ class AssistantSessionSerializer(serializers.ModelSerializer):
 
 class AssistantMessageInputSerializer(serializers.Serializer):
     question = serializers.CharField(max_length=4000, trim_whitespace=True)
+    request_id = serializers.UUIDField()
