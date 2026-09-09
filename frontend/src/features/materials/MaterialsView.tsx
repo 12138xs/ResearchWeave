@@ -165,7 +165,7 @@ export function MaterialDetailView() {
   const selected = Number(params.get('version')) || null;
   const { data, loading, error } = useApiData<Material>(`/api/materials/${id}/?reload=${reload}`, emptyMaterial);
   const refresh = () => setReload((value) => value + 1);
-  const version = data.versions.find((item) => item.id === selected) ?? data.versions[0];
+  const version = selected ? data.versions.find((item) => item.id === selected) : data.versions[0];
   return <main className="page experiments-page">
     <Link to="/materials">返回研究材料</Link>
     <Header eyebrow="" title={loading ? '正在读取材料…' : error ? '材料不可用' : data.title} description="每条证据绑定原文件版本，更新材料不会改变旧引用。" />
@@ -179,6 +179,7 @@ export function MaterialDetailView() {
         <button type="button" onClick={refresh}>刷新状态</button>
       </div>
       {version && <VersionEvidence key={version.id} material={data} version={version} reload={reload} refresh={refresh} />}
+      {selected && !version && <p role="alert">引用的版本不存在或不可访问，请从版本列表选择可用版本。</p>}
     </>}
   </main>;
 }
