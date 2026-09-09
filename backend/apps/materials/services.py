@@ -1,16 +1,20 @@
 """Immutable originals and evidence; no model or external API is called here."""
 import hashlib
+import json
+from datetime import timedelta
 from pathlib import Path
 from uuid import uuid4
 
 from django.db import connection, transaction
 from django.db.models import Max
 from django.utils import timezone
+from django.shortcuts import get_object_or_404
 from pypdf import PdfReader
 from rest_framework.exceptions import ValidationError
 
 from apps.common.permissions import Visibility, editable_by
-from apps.materials.models import Evidence, Material, MaterialVersion
+from apps.materials.models import Evidence, Material, MaterialVersion, ResearchCard
+from apps.materials.selectors import get_version
 from apps.storage.provider import get_storage_provider
 from apps.tasks.models import TaskRecord
 
@@ -155,3 +159,49 @@ def parse_version(version_id):
             result={"material_id": version.material_id, "version_id": version.pk, "evidence_count": len(rows), "status": version.status},
             updated_at=timezone.now(),
         )
+
+
+def retry_version(user, pk, version_id):
+    with transaction.atomic():
+        version = get_version(user, pk, version_id, write=True, lock=True)
+        if version.status in {"ready", "needs_review"}:
+            return 200, "证据已生成，无需重复解析。"
+        if version.status != "failed" and version.updated_at > timezone.now() - timedelta(minutes=5):
+            return 409, "任务正在等待或执行，请稍后刷新。"
+        version.status, version.error = "queued", ""
+        version.save(update_fields=["status", "error", "updated_at"])
+        TaskRecord.objects.filter(pk=version.task_id).update(status="pending", error="", stage="等待解析", updated_at=timezone.now())
+        enqueue(version.pk)
+    return 202, "已申请重新解析。"
+
+
+def review_evidence(user, pk, version_id, evidence_id, confirmed):
+    if confirmed is not True:
+        raise ValidationError("请明确确认已对照原文核对文字与公式。")
+    with transaction.atomic():
+        version = get_version(user, pk, version_id, write=True, lock=True)
+        evidence = get_object_or_404(version.evidence, pk=evidence_id)
+        if not evidence.text.strip():
+            raise ValidationError("此页没有可用文字，不能标为已核对可用；请补充整理后的 Markdown 版本。")
+        if evidence.reviewed_at is None:
+            evidence.review_required = False
+            evidence.reviewed_by = user
+            evidence.reviewed_at = timezone.now()
+            evidence.save(update_fields=["review_required", "reviewed_by", "reviewed_at"])
+        if not version.evidence.filter(review_required=True).exists():
+            version.status = "ready"
+            version.save(update_fields=["status", "updated_at"])
+
+
+def import_card(user, pk, version_id, values):
+    with transaction.atomic():
+        version = get_version(user, pk, version_id, write=True, lock=True)
+        ids = sorted(set(values["evidence_ids"]))
+        if version.evidence.filter(pk__in=ids).count() != len(ids):
+            raise ValidationError("研究卡片必须引用当前原文件版本的证据。")
+        digest = hashlib.sha256(json.dumps([values["title"], values["markdown"], ids], ensure_ascii=False).encode()).hexdigest()
+        card, created = ResearchCard.objects.get_or_create(version=version, sha256=digest,
+            defaults={"title": values["title"], "markdown": values["markdown"], "created_by": user})
+        if created:
+            card.evidence.set(ids)
+    return card, created

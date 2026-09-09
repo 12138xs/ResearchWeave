@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
-import { apiFetch, payloadMessage, readResponsePayload } from '../../api/client';
+import { submitMaterial as submit } from '../../api/materials';
 import { useApiData } from '../../app/hooks';
 import { Header } from '../../components/Header';
 
@@ -15,15 +15,6 @@ type Detail = Version & { evidence: Evidence[]; cards: { id: number; title: stri
 const emptyList = { count: 0, results: [] as Material[] };
 const emptyMaterial: Material = { id: 0, title: '', visibility: '', can_edit: false, versions: [] };
 const labels: Record<string, string> = { queued: '等待解析', processing: '正在解析', ready: '可用', needs_review: '待核对', failed: '解析失败' };
-
-async function submit(url: string, data: FormData | object) {
-  const response = await apiFetch(url, data instanceof FormData
-    ? { method: 'POST', body: data }
-    : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
-  const payload = await readResponsePayload(response);
-  if (!response.ok) throw new Error(payloadMessage(payload, '操作失败，请稍后重试。'));
-  return payload;
-}
 
 function Upload({ material, onComplete }: { material?: Material; onComplete: () => void }) {
   const [files, setFiles] = useState<File[]>([]);

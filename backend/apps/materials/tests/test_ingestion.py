@@ -1,4 +1,7 @@
+import hashlib
+import os
 from pathlib import Path
+from unittest import skipUnless
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 from io import BytesIO, StringIO
@@ -6,6 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.files import File
 from django.test import TestCase, TransactionTestCase, override_settings
 from django.core.management import call_command, CommandError
 from django.db import close_old_connections
@@ -210,6 +214,26 @@ class IngestionTests(TestCase):
         version.refresh_from_db()
         self.assertEqual(version.status, "ready")
         self.assertEqual(version.evidence.count(), 1)
+
+    @skipUnless(os.getenv("MATERIAL_PDF_SAMPLE"), "未提供可选公开 PDF 验收样本")
+    def test_public_fno_pdf_preserves_pages_original_and_old_citations(self):
+        # Optional operator-provided arXiv:2010.08895v3; no network or bundled paper in tests.
+        path = Path(os.environ["MATERIAL_PDF_SAMPLE"])
+        with path.open("rb") as handle:
+            version, _ = ingest(File(handle, name="fno.pdf"), owner=self.owner)
+        parse_version(version.pk)
+        version.refresh_from_db()
+        self.assertEqual(version.status, "needs_review")
+        self.assertEqual(list(version.evidence.values_list("page", flat=True)), list(range(1, 17)))
+        self.assertIn("LEARNINGOPERATORS", "".join(version.evidence.get(page=3).text.split()).upper())
+        self.assertIn("FOURIER NEURAL OPERATOR", version.evidence.get(page=1).text)
+        new, _ = self.upload(body=b"New derived notes", material=version.material)
+        parse_version(new.pk)
+        response = self.client.get(f"/api/materials/{version.material_id}/versions/{version.pk}/file/")
+        digest = hashlib.sha256(b"".join(response.streaming_content)).hexdigest()
+        self.assertEqual(digest, version.sha256)
+        self.assertEqual(digest, hashlib.sha256(path.read_bytes()).hexdigest())
+        self.assertEqual(version.evidence.count(), 16)
 
 
 class ConcurrentIngestionTests(TransactionTestCase):
