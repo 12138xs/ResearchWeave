@@ -147,6 +147,9 @@ def run_exchange(exchange_id, attempt):
                     progress(f"已检索 {usage['tool_calls']} 次，找到 {len(sources)} 条依据")
                 continue
             if not searched:
+                if turn < 3:
+                    messages.extend([message, {"role": "user", "content": "本轮尚未检索，不能使用历史引用或直接发布答案。请先调用 search_knowledge 获取当前授权原文，再使用本轮返回的来源编号回答。"}])
+                    continue
                 raise ValueError("未检索就回答")
             stage = "answer_validation"
             if not sources:
@@ -176,6 +179,15 @@ def run_exchange(exchange_id, attempt):
                 if not 1 <= len(answer) <= 6000 or any(marker in answer for marker in ("<tool_call>", "<invoke", "]minimax[")):
                     raise ValueError("审校结果格式不合法")
                 stage = "answer_validation"
+                def normalize_citation(match):
+                    block = match.group(1)
+                    if not re.fullmatch(r"S\d+(?:\s*[,，]\s*S\d+)*", block):
+                        raise ValueError("引用格式不合法")
+                    group = re.findall(r"S\d+", block)
+                    if any(label not in sources for label in group):
+                        raise ValueError("引用不存在")
+                    return "".join(f"[{label}]" for label in group)
+                answer = re.sub(r"\[(S\d+[^\]\n]*)\]", normalize_citation, answer)
                 labels = re.findall(r"\[(S\d+)\]", answer)
                 if not labels or any(label not in sources for label in labels):
                     raise ValueError("引用不存在")
