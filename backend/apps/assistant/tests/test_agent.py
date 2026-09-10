@@ -116,6 +116,25 @@ class AgentTests(TestCase):
         self.assertEqual(self.exchange.answer, "")
 
     @patch("apps.assistant.agent.call_minimax_chat")
+    def test_grouped_citations_are_all_validated_and_normalized(self, model):
+        document = Document.objects.create(title="PINN boundary")
+        DocumentVersion.objects.create(document=document, markdown="PINN boundary condition")
+        model.side_effect = [search(), reply({"answer": "草稿 [S1]"}), reply({"answer": "材料依据 [S1, S2]"})]
+        run_exchange(self.exchange.pk, 1)
+        self.exchange.refresh_from_db()
+        self.assertEqual(self.exchange.status, "completed")
+        self.assertEqual(self.exchange.answer, "材料依据 [S1][S2]")
+        self.assertEqual(len(self.exchange.sources), 2)
+
+    @patch("apps.assistant.agent.call_minimax_chat")
+    def test_unknown_source_inside_group_is_not_ignored(self, model):
+        model.side_effect = [search(), reply({"answer": "草稿 [S1]"}), reply({"answer": "依据 [S1]；伪造 [S1,S999]"})]
+        run_exchange(self.exchange.pk, 1)
+        self.exchange.refresh_from_db()
+        self.assertEqual(self.exchange.status, "failed")
+        self.assertEqual(self.exchange.answer, "")
+
+    @patch("apps.assistant.agent.call_minimax_chat")
     def test_quoted_prose_needs_no_model_generated_json(self, model):
         model.side_effect = [search(), reply({"answer": '材料写有 "PDE residual" [S1]。'}) , reply({"answer": '材料写有 "PDE residual" [S1]。\n建议：先验证。'})]
         run_exchange(self.exchange.pk, 1)
