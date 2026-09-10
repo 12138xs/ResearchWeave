@@ -149,6 +149,7 @@ class AgentTests(TestCase):
         response = self.client.get(self.url)
         self.assertEqual(response.json()["status"], "failed")
         self.assertNotIn("secret", response.content.decode())
+        self.assertEqual(response.json()["usage"]["model_calls"], 1)
 
     @patch("apps.assistant.services._publish")
     def test_duplicate_request_and_conflicting_question(self, publish):

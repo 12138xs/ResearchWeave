@@ -10,6 +10,18 @@ from apps.assistant.agent import TOOLS
 @override_settings(MODEL_GATEWAY_API_KEY="test-placeholder")
 class GatewayToolTests(SimpleTestCase):
     @patch("apps.ai.minimax.urlopen")
+    def test_empty_answer_preserves_usage_without_exposing_reasoning(self, open_url):
+        result = MagicMock()
+        result.__enter__.return_value.read.return_value = json.dumps({"choices": [{"finish_reason": "length", "message": {
+            "content": "<think>private reasoning</think>"}}], "usage": {"total_tokens": 2400}}).encode()
+        open_url.return_value = result
+        with self.assertRaises(MiniMaxAPIError) as caught:
+            call_minimax_chat([])
+        self.assertEqual(caught.exception.usage["total_tokens"], 2400)
+        self.assertEqual(caught.exception.code, "output_limit")
+        self.assertNotIn("private reasoning", str(caught.exception))
+
+    @patch("apps.ai.minimax.urlopen")
     def test_explicit_tool_choice_is_sent_only_when_requested(self, open_url):
         result = MagicMock()
         result.__enter__.return_value.read.return_value = json.dumps({"choices": [{"message": {"content": "answer"}}]}).encode()
