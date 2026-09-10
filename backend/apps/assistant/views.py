@@ -6,6 +6,7 @@ from django.http import StreamingHttpResponse
 from rest_framework import generics, serializers, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.renderers import JSONRenderer
 from rest_framework.views import APIView
 
 from apps.assistant.models import AssistantExchange, AssistantSession
@@ -75,8 +76,16 @@ class AssistantExchangeView(APIView):
         return Response(AssistantExchangeSerializer(exchange).data)
 
 
+class EventStreamRenderer(JSONRenderer):
+    # The successful response is a StreamingHttpResponse; this renderer lets DRF
+    # negotiate the browser's Accept header before get() constructs that stream.
+    media_type = "text/event-stream"
+    format = "event-stream"
+
+
 class AssistantProgressView(AssistantExchangeView):
     http_method_names = ["get", "head", "options"]
+    renderer_classes = [JSONRenderer, EventStreamRenderer]
 
     def get(self, request, pk, exchange_id):
         exchange = self.get_object(request, pk, exchange_id)
