@@ -91,6 +91,13 @@ class EvidenceSearchTests(TestCase):
         self.assertIn("BOUNDARY", result["excerpt"])
         self.assertLessEqual(len(result["excerpt"]), 603)
 
+    def test_short_evidence_keeps_context_before_late_match(self):
+        text = "Training inputs use fixed sensors. " + "context " * 35 + "GENERALIZATION limits"
+        self.assertLess(len(text), 600)
+        self.source(text)
+        result = self.search("GENERALIZATION").json()["results"][0]
+        self.assertEqual(result["excerpt"], text)
+
     def test_hybrid_request_is_explicitly_downgraded(self):
         self.source()
         response = self.search("Fourier", mode="hybrid").json()
