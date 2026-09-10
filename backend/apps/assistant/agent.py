@@ -27,6 +27,9 @@ SYSTEM = """你是 AI for PDEs 科研助理。只能使用 search_knowledge 工�
 最终直接输出中文回答正文，使用 [S1] 等行内引用，不输出 JSON 包装或 source_ids 列表。
 回答分清材料事实、你的推断/建议、仍需验证的假设；每项材料事实都带引用。
 只能引用工具实际返回的编号，不可编造论文或声称覆盖全部最新工作。无相关证据时明确材料不足。
+未检索到不等于整个知识库不存在；短摘录未提及不等于整篇论文没有。只能描述当前范围及摘录能确认的内容。
+模型名称中的维数不代表物理空间维数；辨明空间轴与时间轴，不能把时空张量当作三维空间实验。
+问题缺少内部实测记录时简洁说明缺口，不展开无关公开论文数字。默认用 300–1000 字回答，优先关键依据与下一步。
 答案最多 6000 字，禁止输出思维链。"""
 
 
@@ -81,7 +84,10 @@ def run_exchange(exchange_id, attempt):
                 raise ValueError("历史来源权限已变化")
             progress("正在检索相关材料" if turn == 0 else "正在比较证据并组织回答")
             stage = "model_request"
-            response = call_minimax_chat(messages, model="MiniMax-M3", tools=TOOLS if turn < 3 else None,
+            if turn == 3:
+                messages.append({"role": "user", "content": "检索预算已用完。现在停止调用工具，直接根据已有摘录给出简洁中文回答，材料事实保留 [S1] 等引用；无法证实的部分明确说明证据不足。"})
+            response = call_minimax_chat(messages, model="MiniMax-M3", tools=TOOLS,
+                                         tool_choice="none" if turn == 3 else "auto",
                                          temperature=0.1, max_tokens=2400, timeout=35)
             usage["model_calls"] += 1
             usage["total_tokens"] += int(response.usage.get("total_tokens", 0) or 0)
@@ -90,19 +96,25 @@ def run_exchange(exchange_id, attempt):
             stage = "tool_validation"
             calls = message.get("tool_calls") or []
             if calls:
-                if turn >= 3 or len(calls) > 2:
+                if turn >= 3 or len(calls) > 8:
                     raise ValueError("工具预算超限")
                 # MiniMax interleaved thinking requires the complete assistant message.
                 # It remains in worker memory only and is never serialized to the browser.
                 messages.append(message)
-                for call in calls:
+                seen_ids = set()
+                for index, call in enumerate(calls):
                     check()
                     function = call.get("function", {})
-                    if function.get("name") != "search_knowledge" or not isinstance(call.get("id"), str):
+                    if function.get("name") != "search_knowledge" or not isinstance(call.get("id"), str) or call["id"] in seen_ids:
                         raise ValueError("工具不允许")
+                    seen_ids.add(call["id"])
                     arguments = json.loads(function.get("arguments", "{}"))
                     if not isinstance(arguments, dict) or set(arguments) != {"query"}:
                         raise ValueError("工具参数不合法")
+                    if index >= 2:
+                        messages.append({"role": "tool", "tool_call_id": call["id"], "content": json.dumps({
+                            "sources": [], "error": "round_tool_limit", "message": "本轮最多执行两个检索，本次未执行。可在下一轮请求，或根据已有依据回答。"}, ensure_ascii=False)})
+                        continue
                     rows = search_knowledge(user, scope, arguments["query"])
                     output = []
                     for row in rows:
@@ -128,6 +140,8 @@ def run_exchange(exchange_id, attempt):
                 answer = response.content.strip()
                 if not 1 <= len(answer) <= 6000:
                     raise ValueError("回答格式不合法")
+                if any(marker in answer for marker in ("<tool_call>", "<invoke", "]minimax[")):
+                    raise ValueError("工具标记不能作为回答")
                 labels = re.findall(r"\[(S\d+)\]", answer)
                 if not labels or any(label not in sources for label in labels):
                     raise ValueError("引用不存在")

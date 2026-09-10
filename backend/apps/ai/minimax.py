@@ -34,6 +34,7 @@ def call_minimax_chat(
     max_tokens: int | None = None,
     timeout: int | None = None,
     tools: list[dict[str, Any]] | None = None,
+    tool_choice: str | None = None,
 ) -> MiniMaxResponse:
     api_key = getattr(settings, "MODEL_GATEWAY_API_KEY", "")
     if not api_key:
@@ -52,6 +53,10 @@ def call_minimax_chat(
     }
     if tools:
         payload["tools"] = tools
+    if tool_choice is not None:
+        if tool_choice not in {"auto", "none"}:
+            raise ValueError("Unsupported tool choice.")
+        payload["tool_choice"] = tool_choice
     request = Request(
         f"{base_url}/chat/completions",
         data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
