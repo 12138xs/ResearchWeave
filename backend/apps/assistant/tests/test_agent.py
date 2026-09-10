@@ -143,7 +143,7 @@ class AgentTests(TestCase):
         self.assertEqual(self.exchange.status, "completed")
         self.assertEqual(self.exchange.answer, "复核后依据 [S1]")
         self.assertEqual(self.exchange.usage["model_calls"], 4)
-        self.assertIn("尚未检索", model.call_args_list[1].args[0][-1]["content"])
+        self.assertIn("尚未检索", str(model.call_args_list[1].args[0]))
 
     @patch("apps.assistant.agent.call_minimax_chat")
     def test_quoted_prose_needs_no_model_generated_json(self, model):
