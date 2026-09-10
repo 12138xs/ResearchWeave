@@ -194,6 +194,12 @@ class AgentTests(TestCase):
             self.assertIn(b"event: progress", b"".join(response.streaming_content))
         publish.assert_not_called()
 
+    def test_browser_event_source_accept_header_receives_snapshot(self):
+        response = self.client.get(self.url + "progress/", HTTP_ACCEPT="text/event-stream")
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response["Content-Type"].startswith("text/event-stream"))
+        self.assertIn(b"event: progress", b"".join(response.streaming_content))
+
     def test_deleted_source_hides_historical_answer(self):
         self.exchange.status, self.exchange.answer = "completed", "sensitive derived answer"
         self.exchange.sources = [{"type": "document", "id": self.version.pk}]
