@@ -40,23 +40,49 @@ class AgentTests(TestCase):
     @patch("apps.assistant.agent.call_minimax_chat")
     def test_extra_searches_receive_budget_feedback_without_executing(self, model):
         calls = [dict(search().raw["choices"][0]["message"]["tool_calls"][0], id=f"call-{n}") for n in range(3)]
-        model.side_effect = [reply(calls=calls), reply({"answer": "残差与边界损失 [S1]。"})]
+        model.side_effect = [reply(calls=calls), reply({"answer": "残差与边界损失 [S1]。"}), reply({"answer": "已审校 [S1]。"})]
         run_exchange(self.exchange.pk, 1)
         self.exchange.refresh_from_db()
         self.assertEqual(self.exchange.status, "completed")
         self.assertEqual(self.exchange.usage["tool_calls"], 2)
-        feedback = json.loads(model.call_args.args[0][-1]["content"])
+        feedback = json.loads(model.call_args_list[1].args[0][-1]["content"])
         self.assertEqual(feedback["error"], "round_tool_limit")
 
     @patch("apps.assistant.agent.call_minimax_chat")
     def test_last_round_explicitly_disables_tools_and_requests_answer(self, model):
-        model.side_effect = [search(), search(), search(), reply({"answer": "残差与边界损失 [S1]。"})]
+        model.side_effect = [search(), search(), search(), reply({"answer": "残差与边界损失 [S1]。"}), reply({"answer": "已审校 [S1]。"})]
         run_exchange(self.exchange.pk, 1)
         self.exchange.refresh_from_db()
         self.assertEqual(self.exchange.status, "completed")
-        self.assertEqual(model.call_args.kwargs["tool_choice"], "none")
-        self.assertTrue(model.call_args.kwargs["tools"])
-        self.assertIn("检索预算已用完", model.call_args.args[0][-1]["content"])
+        self.assertEqual(model.call_args_list[3].kwargs["tool_choice"], "none")
+        self.assertTrue(model.call_args_list[3].kwargs["tools"])
+        self.assertIn("检索预算已用完", model.call_args_list[3].args[0][-1]["content"])
+        self.assertEqual(self.exchange.usage["model_calls"], 5)
+
+    @patch("apps.assistant.agent.call_minimax_chat")
+    def test_only_reviewed_answer_is_published_and_review_uses_original_excerpts(self, model):
+        model.side_effect = [search(), reply({"answer": "未经审校的草稿 [S999]"}), reply({"answer": "仅能确认损失包含残差 [S1]。"})]
+        run_exchange(self.exchange.pk, 1)
+        self.exchange.refresh_from_db()
+        self.assertEqual(self.exchange.status, "completed")
+        self.assertEqual(self.exchange.answer, "仅能确认损失包含残差 [S1]。")
+        payload = json.loads(model.call_args.args[0][-1]["content"])
+        self.assertEqual(payload["sources"][0]["excerpt"], self.version.markdown)
+        self.assertEqual(payload["question"], self.exchange.question)
+
+    @patch("apps.assistant.agent.call_minimax_chat")
+    def test_cancellation_during_review_discards_both_draft_and_review(self, model):
+        def respond(*args, **kwargs):
+            if model.call_count == 1:
+                return search()
+            if model.call_count == 3:
+                control_exchange(self.exchange, "cancel", 1)
+            return reply({"answer": "草稿或审校 [S1]"})
+        model.side_effect = respond
+        run_exchange(self.exchange.pk, 1)
+        self.exchange.refresh_from_db()
+        self.assertEqual(self.exchange.status, "cancelled")
+        self.assertEqual(self.exchange.answer, "")
 
     @patch("apps.assistant.agent.call_minimax_chat")
     def test_serialized_tool_markup_is_never_an_answer(self, model):
@@ -68,20 +94,21 @@ class AgentTests(TestCase):
 
     @patch("apps.assistant.agent.call_minimax_chat")
     def test_tool_loop_citations_and_reasoning_continuity(self, model):
-        model.side_effect = [search(), reply({"answer": "材料包含残差损失 [S1]。建议另行验证边界误差。", "source_ids": ["S1"]})]
+        model.side_effect = [search(), reply({"answer": "材料包含残差损失 [S1]。"}), reply({"answer": "材料包含残差损失 [S1]。建议另行验证边界误差。"})]
         run_exchange(self.exchange.pk, 1)
         self.exchange.refresh_from_db()
         self.assertEqual(self.exchange.status, "completed")
         self.assertEqual(self.exchange.sources[0]["id"], self.version.pk)
-        self.assertEqual(self.exchange.usage["total_tokens"], 20)
-        self.assertIn("reasoning_details", model.call_args.args[0][-2])
+        self.assertEqual(self.exchange.usage["total_tokens"], 30)
+        self.assertIn("reasoning_details", model.call_args_list[1].args[0][-2])
+        self.assertNotIn("private reasoning", str(model.call_args.args[0]))
         self.assertNotIn("private reasoning", json.dumps(self.client.get(self.url).json()))
         run_exchange(self.exchange.pk, 1)
-        self.assertEqual(model.call_count, 2)
+        self.assertEqual(model.call_count, 3)
 
     @patch("apps.assistant.agent.call_minimax_chat")
     def test_forged_source_is_not_published(self, model):
-        model.side_effect = [search(), reply({"answer": "结论 [S999]", "source_ids": ["S999"]})]
+        model.side_effect = [search(), reply({"answer": "结论 [S1]"}), reply({"answer": "结论 [S999]"})]
         run_exchange(self.exchange.pk, 1)
         self.exchange.refresh_from_db()
         self.assertEqual(self.exchange.status, "failed")
@@ -89,7 +116,7 @@ class AgentTests(TestCase):
 
     @patch("apps.assistant.agent.call_minimax_chat")
     def test_quoted_prose_needs_no_model_generated_json(self, model):
-        model.side_effect = [search(), reply({"answer": '材料写有 "PDE residual" [S1]。\n建议：先验证。'})]
+        model.side_effect = [search(), reply({"answer": '材料写有 "PDE residual" [S1]。'}) , reply({"answer": '材料写有 "PDE residual" [S1]。\n建议：先验证。'})]
         run_exchange(self.exchange.pk, 1)
         self.exchange.refresh_from_db()
         self.assertEqual(self.exchange.status, "completed")
@@ -191,11 +218,11 @@ class AgentTests(TestCase):
         previous.sources = [{"type": "document", "id": self.version.pk}]
         previous.save()
         followup = AssistantExchange.objects.create(session=self.session, question="如何改进", status="queued")
-        model.side_effect = [search(), reply({"answer": "建议验证损失权重 [S1]", "source_ids": ["S1"]})]
+        model.side_effect = [search(), reply({"answer": "建议验证损失权重 [S1]"}), reply({"answer": "建议验证损失权重 [S1]"})]
         run_exchange(followup.pk, 1)
         followup.refresh_from_db()
         self.assertEqual(followup.status, "completed")
-        self.assertIn("先前答案", str(model.call_args.args[0]))
+        self.assertIn("先前答案", str(model.call_args_list[0].args[0]))
         self.assertEqual(followup.usage["tool_calls"], 1)
 
     @patch("apps.assistant.agent.call_minimax_chat")

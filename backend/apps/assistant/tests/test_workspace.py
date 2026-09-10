@@ -111,17 +111,18 @@ class WorkspaceTests(TestCase):
         doc = Document.objects.create(title="PINN")
         DocumentVersion.objects.create(document=doc, markdown="PINN residual")
         first = AssistantExchange.objects.create(session=self.session, question="PINN", status="queued")
-        model.side_effect = [search(), reply({"answer": "memory derived old answer [S1]"})]
+        model.side_effect = [search(), reply({"answer": "memory derived old answer [S1]"}), reply({"answer": "memory derived old answer [S1]"})]
         run_exchange(first.pk, 1)
         first.refresh_from_db()
         self.assertEqual(first.status, "completed")
-        self.assertIn("style sentinel", str(model.call_args.args[0]))
+        self.assertIn("style sentinel", str(model.call_args_list[0].args[0]))
         self.memory.delete()
         second = AssistantExchange.objects.create(session=self.session, question="PINN again", status="queued")
-        model.side_effect = [search(), reply({"answer": "new answer [S1]"})]
+        model.reset_mock()
+        model.side_effect = [search(), reply({"answer": "new answer [S1]"}), reply({"answer": "new answer [S1]"})]
         run_exchange(second.pk, 1)
-        self.assertNotIn("memory derived old answer", str(model.call_args.args[0]))
-        self.assertNotIn("memory sentinel", str(model.call_args.args[0]))
+        self.assertNotIn("memory derived old answer", str(model.call_args_list))
+        self.assertNotIn("memory sentinel", str(model.call_args_list))
         self.assertEqual(personal_context(self.other), ("", ""))
 
     @patch("apps.assistant.agent.call_minimax_chat")
