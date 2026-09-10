@@ -28,6 +28,8 @@ def query_terms(query):
 
 
 def excerpt(text, query, terms):
+    if len(text) <= 600:
+        return text
     lower = text.casefold()
     position = lower.find(query.casefold())
     if position < 0:
