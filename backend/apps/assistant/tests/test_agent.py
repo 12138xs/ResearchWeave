@@ -67,6 +67,7 @@ class AgentTests(TestCase):
         self.assertEqual(self.exchange.status, "completed")
         self.assertEqual(self.exchange.answer, "仅能确认损失包含残差 [S1]。")
         payload = json.loads(model.call_args.args[0][-1]["content"])
+        self.assertNotIn("draft", payload)
         self.assertEqual(payload["sources"][0]["excerpt"], self.version.markdown)
         self.assertEqual(payload["question"], self.exchange.question)
 

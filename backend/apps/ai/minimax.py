@@ -15,7 +15,10 @@ class MiniMaxConfigError(RuntimeError):
 
 
 class MiniMaxAPIError(RuntimeError):
-    pass
+    def __init__(self, message, *, usage=None, code="api_error"):
+        super().__init__(message)
+        self.usage = usage or {}
+        self.code = code
 
 
 @dataclass(frozen=True)
@@ -94,7 +97,9 @@ def call_minimax_chat(
     message = choices[0].get("message") or {}
     content = _strip_thinking(str(message.get("content") or "")).strip()
     if not content and not (tools and message.get("tool_calls")):
-        raise MiniMaxAPIError("MiniMax API returned an empty answer.")
+        raise MiniMaxAPIError("MiniMax API returned an empty answer.",
+            usage=response_payload.get("usage") or {},
+            code="output_limit" if choices[0].get("finish_reason") == "length" else "empty_answer")
 
     return MiniMaxResponse(
         content=content,
