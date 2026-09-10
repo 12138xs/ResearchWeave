@@ -135,6 +135,17 @@ class AgentTests(TestCase):
         self.assertEqual(self.exchange.answer, "")
 
     @patch("apps.assistant.agent.call_minimax_chat")
+    def test_answer_before_search_receives_correction_within_budget(self, model):
+        model.side_effect = [reply({"answer": "先前资料足够了 [S1]"}), search(),
+            reply({"answer": "当前依据 [S1]"}), reply({"answer": "复核后依据 [S1]"})]
+        run_exchange(self.exchange.pk, 1)
+        self.exchange.refresh_from_db()
+        self.assertEqual(self.exchange.status, "completed")
+        self.assertEqual(self.exchange.answer, "复核后依据 [S1]")
+        self.assertEqual(self.exchange.usage["model_calls"], 4)
+        self.assertIn("尚未检索", model.call_args_list[1].args[0][-1]["content"])
+
+    @patch("apps.assistant.agent.call_minimax_chat")
     def test_quoted_prose_needs_no_model_generated_json(self, model):
         model.side_effect = [search(), reply({"answer": '材料写有 "PDE residual" [S1]。'}) , reply({"answer": '材料写有 "PDE residual" [S1]。\n建议：先验证。'})]
         run_exchange(self.exchange.pk, 1)
