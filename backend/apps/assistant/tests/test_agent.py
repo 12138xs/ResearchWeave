@@ -38,6 +38,35 @@ class AgentTests(TestCase):
         self.url = f"/api/assistant/sessions/{self.session.pk}/exchanges/{self.exchange.pk}/"
 
     @patch("apps.assistant.agent.call_minimax_chat")
+    def test_extra_searches_receive_budget_feedback_without_executing(self, model):
+        calls = [dict(search().raw["choices"][0]["message"]["tool_calls"][0], id=f"call-{n}") for n in range(3)]
+        model.side_effect = [reply(calls=calls), reply({"answer": "残差与边界损失 [S1]。"})]
+        run_exchange(self.exchange.pk, 1)
+        self.exchange.refresh_from_db()
+        self.assertEqual(self.exchange.status, "completed")
+        self.assertEqual(self.exchange.usage["tool_calls"], 2)
+        feedback = json.loads(model.call_args.args[0][-1]["content"])
+        self.assertEqual(feedback["error"], "round_tool_limit")
+
+    @patch("apps.assistant.agent.call_minimax_chat")
+    def test_last_round_explicitly_disables_tools_and_requests_answer(self, model):
+        model.side_effect = [search(), search(), search(), reply({"answer": "残差与边界损失 [S1]。"})]
+        run_exchange(self.exchange.pk, 1)
+        self.exchange.refresh_from_db()
+        self.assertEqual(self.exchange.status, "completed")
+        self.assertEqual(model.call_args.kwargs["tool_choice"], "none")
+        self.assertTrue(model.call_args.kwargs["tools"])
+        self.assertIn("检索预算已用完", model.call_args.args[0][-1]["content"])
+
+    @patch("apps.assistant.agent.call_minimax_chat")
+    def test_serialized_tool_markup_is_never_an_answer(self, model):
+        model.side_effect = [search(), reply({"answer": "<tool_call>search_knowledge [S1]</tool_call>"})]
+        run_exchange(self.exchange.pk, 1)
+        self.exchange.refresh_from_db()
+        self.assertEqual(self.exchange.status, "failed")
+        self.assertEqual(self.exchange.answer, "")
+
+    @patch("apps.assistant.agent.call_minimax_chat")
     def test_tool_loop_citations_and_reasoning_continuity(self, model):
         model.side_effect = [search(), reply({"answer": "材料包含残差损失 [S1]。建议另行验证边界误差。", "source_ids": ["S1"]})]
         run_exchange(self.exchange.pk, 1)

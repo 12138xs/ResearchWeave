@@ -10,6 +10,16 @@ from apps.assistant.agent import TOOLS
 @override_settings(MODEL_GATEWAY_API_KEY="test-placeholder")
 class GatewayToolTests(SimpleTestCase):
     @patch("apps.ai.minimax.urlopen")
+    def test_explicit_tool_choice_is_sent_only_when_requested(self, open_url):
+        result = MagicMock()
+        result.__enter__.return_value.read.return_value = json.dumps({"choices": [{"message": {"content": "answer"}}]}).encode()
+        open_url.return_value = result
+        call_minimax_chat([], tools=TOOLS, tool_choice="none")
+        self.assertEqual(json.loads(open_url.call_args.args[0].data)["tool_choice"], "none")
+        call_minimax_chat([])
+        self.assertNotIn("tool_choice", json.loads(open_url.call_args.args[0].data))
+
+    @patch("apps.ai.minimax.urlopen")
     def test_empty_content_is_only_allowed_for_tool_response(self, open_url):
         result = MagicMock()
         result.__enter__.return_value.read.return_value = json.dumps({"choices": [{"message": {
