@@ -231,6 +231,7 @@ class AgentTests(TestCase):
         followup.refresh_from_db()
         self.assertEqual(followup.status, "completed")
         self.assertIn("先前答案", str(model.call_args_list[0].args[0]))
+        self.assertIn("先前答案", str(model.call_args.args[0]))
         self.assertEqual(followup.usage["tool_calls"], 1)
 
     @patch("apps.assistant.agent.call_minimax_chat")

@@ -116,6 +116,7 @@ class WorkspaceTests(TestCase):
         first.refresh_from_db()
         self.assertEqual(first.status, "completed")
         self.assertIn("style sentinel", str(model.call_args_list[0].args[0]))
+        self.assertIn("style sentinel", str(model.call_args.args[0]))
         self.memory.delete()
         second = AssistantExchange.objects.create(session=self.session, question="PINN again", status="queued")
         model.reset_mock()
