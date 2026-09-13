@@ -96,7 +96,10 @@ def build_context_bundle(*, user, token, question: str, material_ids: list[int],
         if locked_ids != set(selected_material_ids):
             raise BundleSourceUnavailable(unavailable_count=len(set(selected_material_ids) - locked_ids))
     evidence_manifest = [evidence_entry(row) for row in results["results"]]
-    scope = {"material_ids": requested_ids, "visibility": ["private", "team"]}
+    scope = {
+        "material_ids": requested_ids,
+        "visibility": sorted(set(allowed.values_list("visibility", flat=True))),
+    }
     selection = [
         {
             **entry["source"]["identity"],
@@ -157,7 +160,9 @@ def live_bundle_warnings(bundle, user):
     }
     allowed_material_ids = set(externally_accessible_materials(user).values_list("pk", flat=True))
     scoped_material_ids = set(bundle.scope_json.get("material_ids") or [])
-    unavailable = len(scoped_material_ids - allowed_material_ids)
+    unavailable_sources = {
+        ("material", material_id) for material_id in scoped_material_ids - allowed_material_ids
+    }
     warnings = list(bundle.warnings)
     latest = MaterialVersion.objects.filter(
         material_id=OuterRef("version__material_id"),
@@ -172,8 +177,9 @@ def live_bundle_warnings(bundle, user):
             or row.version_id != identity["version_id"]
             or row.version.material_id != identity["material_id"]
             or row.version.material_id not in allowed_material_ids
+            or row.version.status not in {"ready", "needs_review"}
         ):
-            unavailable += 1
+            unavailable_sources.add(("evidence", identity["evidence_id"]))
             continue
         if latest_by_evidence.get(row.pk) != row.version_id:
             warnings.append({
@@ -187,8 +193,8 @@ def live_bundle_warnings(bundle, user):
                 "source": entry["source"],
                 "detail": "The stored source kind differs from current metadata; the frozen value was not replaced.",
             })
-    if unavailable:
-        raise BundleSourceUnavailable(unavailable_count=unavailable)
+    if unavailable_sources:
+        raise BundleSourceUnavailable(unavailable_count=len(unavailable_sources))
     return warnings
 
 
