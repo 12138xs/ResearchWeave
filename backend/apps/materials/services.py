@@ -12,8 +12,9 @@ from django.shortcuts import get_object_or_404
 from pypdf import PdfReader
 from rest_framework.exceptions import ValidationError
 
+from apps.agent_access.contracts import SourceKind
 from apps.common.permissions import Visibility, editable_by
-from apps.materials.models import Evidence, Material, MaterialVersion, ResearchCard
+from apps.materials.models import ExternalAgentAccess, Evidence, Material, MaterialVersion, ResearchCard
 from apps.materials.selectors import get_version
 from apps.storage.provider import get_storage_provider
 from apps.tasks.models import TaskRecord
@@ -24,7 +25,7 @@ MAX_TEXT = 4_000_000
 PARSER_VERSION = "pypdf6-markdown-lines-v1"
 
 
-def ingest(upload, *, owner, title="", visibility="team", material=None):
+def ingest(upload, *, owner, title="", visibility="team", source_kind=SourceKind.UNCLASSIFIED, material=None):
     suffix = Path(upload.name).suffix.lower()
     if suffix not in {".pdf", ".md", ".markdown"}:
         raise ValidationError("只支持 PDF 和 UTF-8 Markdown 文件。")
@@ -32,6 +33,8 @@ def ingest(upload, *, owner, title="", visibility="team", material=None):
         raise ValidationError("文件不能为空，且不能超过 25 MB。")
     if visibility not in Visibility.values:
         raise ValidationError("可见范围无效。")
+    if source_kind not in SourceKind.values:
+        raise ValidationError("来源类型无效。")
     data = upload.read(MAX_BYTES + 1)
     if len(data) > MAX_BYTES:
         raise ValidationError("文件不能超过 25 MB。")
@@ -55,7 +58,12 @@ def ingest(upload, *, owner, title="", visibility="team", material=None):
             if duplicate:
                 return duplicate, False
             if material is None:
-                material = Material.objects.create(title=(title.strip() or Path(upload.name).stem)[:500], owner=owner, visibility=visibility)
+                material = Material.objects.create(
+                    title=(title.strip() or Path(upload.name).stem)[:500],
+                    owner=owner,
+                    visibility=visibility,
+                    source_kind=source_kind,
+                )
             number = (material.versions.aggregate(n=Max("number"))["n"] or 0) + 1
             storage_key = f"objects/materials/{uuid4().hex}{'.pdf' if suffix == '.pdf' else '.md'}"
             target = get_storage_provider().resolve(storage_key)
@@ -73,6 +81,24 @@ def ingest(upload, *, owner, title="", visibility="team", material=None):
         if target:
             target.unlink(missing_ok=True)
         raise
+
+
+def set_external_agent_access(user, material_id, *, allowed):
+    with transaction.atomic():
+        material = Material.objects.select_for_update().get(pk=material_id, owner=user)
+        if allowed and material.source_kind == SourceKind.UNCLASSIFIED:
+            raise ValidationError("材料来源尚未分类，不能批准外部 Agent 读取。")
+        material.external_agent_access = (
+            ExternalAgentAccess.APPROVED if allowed else ExternalAgentAccess.BLOCKED
+        )
+        material.external_access_changed_by = user
+        material.external_access_changed_at = timezone.now()
+        material.save(update_fields=[
+            "external_agent_access",
+            "external_access_changed_by",
+            "external_access_changed_at",
+        ])
+        return material
 
 
 def enqueue(version_id):

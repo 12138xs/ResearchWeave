@@ -2,16 +2,50 @@ from django.conf import settings
 from django.db import models
 
 from apps.common.permissions import Visibility
+from apps.agent_access.contracts import SourceKind
+
+
+class ExternalAgentAccess(models.TextChoices):
+    BLOCKED = "blocked", "禁止外发"
+    APPROVED = "approved", "允许外部 Agent 读取"
 
 
 class Material(models.Model):
     title = models.CharField(max_length=500)
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
     visibility = models.CharField(max_length=20, choices=Visibility.choices, default=Visibility.TEAM)
+    source_kind = models.CharField(max_length=40, choices=SourceKind.choices, default=SourceKind.UNCLASSIFIED)
+    external_agent_access = models.CharField(
+        max_length=16,
+        choices=ExternalAgentAccess.choices,
+        default=ExternalAgentAccess.BLOCKED,
+        db_index=True,
+    )
+    external_access_changed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        related_name="external_material_access_changes",
+        on_delete=models.SET_NULL,
+    )
+    external_access_changed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ["-id"]
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(external_agent_access=ExternalAgentAccess.BLOCKED)
+                    | (
+                        ~models.Q(source_kind=SourceKind.UNCLASSIFIED)
+                        & models.Q(external_access_changed_by=models.F("owner"))
+                        & models.Q(external_access_changed_at__isnull=False)
+                    )
+                ),
+                name="material_external_access_requires_owner_approval",
+            ),
+        ]
 
 
 class MaterialVersion(models.Model):

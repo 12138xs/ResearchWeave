@@ -1,11 +1,24 @@
+from django.conf import settings
+from django.db.models import F
 from django.shortcuts import get_object_or_404
 
+from apps.agent_access.contracts import SourceKind
 from apps.common.permissions import editable_by, visible_to
-from apps.materials.models import Material, MaterialVersion
+from apps.materials.models import ExternalAgentAccess, Material, MaterialVersion
 
 
 def materials(user, write=False):
     return (editable_by if write else visible_to)(Material.objects.all(), user)
+
+
+def externally_accessible_materials(user):
+    if not settings.EXTERNAL_AGENT_ACCESS_ENABLED:
+        return Material.objects.none()
+    return materials(user).filter(
+        external_agent_access=ExternalAgentAccess.APPROVED,
+        external_access_changed_by=F("owner"),
+        external_access_changed_at__isnull=False,
+    ).exclude(source_kind=SourceKind.UNCLASSIFIED)
 
 
 def version_data(version):
@@ -21,6 +34,7 @@ def version_data(version):
 def material_data(material, user):
     return {
         "id": material.pk, "title": material.title, "visibility": material.visibility,
+        "source_kind": material.source_kind, "external_agent_access": material.external_agent_access,
         "can_edit": material.owner_id == user.pk or (user.is_staff and material.visibility == "team"),
         "versions": [version_data(version) for version in material.versions.all()],
     }
@@ -32,5 +46,4 @@ def get_version(user, pk, version_id, write=False, lock=False):
     if lock:
         queryset = queryset.select_for_update()
     return get_object_or_404(queryset, pk=version_id, material_id=pk)
-
 

@@ -102,6 +102,7 @@ INSTALLED_APPS = [
     "apps.storage",
     "apps.materials",
     "apps.exports",
+    "apps.agent_access",
 ]
 
 MIDDLEWARE = [
@@ -166,6 +167,10 @@ REST_FRAMEWORK = {
     "DEFAULT_FILTER_BACKENDS": [
         "django_filters.rest_framework.DjangoFilterBackend",
     ],
+}
+
+EXTERNAL_AGENT_ACCESS_ENABLED = os.getenv("EXTERNAL_AGENT_ACCESS_ENABLED", "0").strip().lower() in {
+    "1", "true", "yes", "on",
 }
 
 STORAGE_ROOT = Path(os.getenv("STORAGE_ROOT", BASE_DIR / "storage"))

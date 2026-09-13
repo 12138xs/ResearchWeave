@@ -16,7 +16,8 @@ def upload_response(request, material=None):
     serializer.is_valid(raise_exception=True)
     values = serializer.validated_data
     version, created = ingest(values["file"], owner=request.user, title=values["title"],
-                              visibility=material.visibility if material else values["visibility"], material=material)
+                              visibility=material.visibility if material else values["visibility"],
+                              source_kind=material.source_kind if material else values["source_kind"], material=material)
     if created:
         enqueue(version.pk)
     version.refresh_from_db()
