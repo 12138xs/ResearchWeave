@@ -9,9 +9,15 @@ from rest_framework.views import APIView
 from apps.agent_access.audit import AuditedAgentAPIViewMixin, record_control_plane_event
 from apps.agent_access.authentication import PersonalAccessTokenAuthentication
 from apps.agent_access.contracts import material_evidence_reference
-from apps.agent_access.models import AgentAccessToken
+from apps.agent_access.context_bundles import build_context_bundle, retrieve_context_bundle
+from apps.agent_access.models import AgentAccessToken, ResearchContextBundle
 from apps.agent_access.permissions import ExternalAgentEnabled, HasTokenScopes
-from apps.agent_access.serializers import EvidenceSearchSerializer, ExternalAccessUpdateSerializer, TokenIssueSerializer
+from apps.agent_access.serializers import (
+    ContextBundleCreateSerializer,
+    EvidenceSearchSerializer,
+    ExternalAccessUpdateSerializer,
+    TokenIssueSerializer,
+)
 from apps.materials.selectors import externally_accessible_materials
 from apps.materials.services import set_external_agent_access
 from apps.search.evidence import search_evidence
@@ -109,7 +115,7 @@ class AgentMeView(AgentReadAPIView):
         if "materials:read" in scopes:
             capabilities.extend(["materials.list", "materials.get"])
         if "evidence:read" in scopes:
-            capabilities.append("evidence.search")
+            capabilities.extend(["evidence.search", "context_bundles.build", "context_bundles.get"])
         return Response({
             "user_id": request.user.pk,
             "token_id": str(request.auth.token_id),
@@ -170,3 +176,23 @@ class AgentEvidenceSearchView(AgentReadAPIView):
         payload["notice"] = "Results use the current bounded keyword retrieval baseline."
         payload.update({"truncated": payload.pop("candidate_limit_reached"), "next_cursor": None, "warnings": []})
         return Response(payload)
+
+
+class AgentContextBundleListCreateView(AgentReadAPIView):
+    audit_action = "context_bundles.build"
+    required_scopes = ("evidence:read",)
+
+    def post(self, request):
+        serializer = ContextBundleCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        payload = build_context_bundle(user=request.user, token=request.auth, **serializer.validated_data)
+        return Response(payload, status=201)
+
+
+class AgentContextBundleDetailView(AgentReadAPIView):
+    audit_action = "context_bundles.get"
+    required_scopes = ("evidence:read",)
+
+    def get(self, request, bundle_id):
+        bundle = get_object_or_404(ResearchContextBundle.objects.filter(owner=request.user), bundle_id=bundle_id)
+        return Response(retrieve_context_bundle(bundle, user=request.user))

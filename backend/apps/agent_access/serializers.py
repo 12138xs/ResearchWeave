@@ -31,3 +31,13 @@ class EvidenceSearchSerializer(serializers.Serializer):
     limit = serializers.IntegerField(default=10, min_value=1, max_value=25)
     material_id = serializers.IntegerField(required=False, min_value=1)
 
+
+class ContextBundleCreateSerializer(serializers.Serializer):
+    question = serializers.CharField(max_length=2000)
+    material_ids = serializers.ListField(
+        child=serializers.IntegerField(min_value=1),
+        required=False,
+        default=list,
+        max_length=50,
+    )
+    limit = serializers.IntegerField(default=10, min_value=1, max_value=25)

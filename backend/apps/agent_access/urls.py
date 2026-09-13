@@ -2,6 +2,8 @@ from django.urls import path
 
 from apps.agent_access.views import (
     AgentEvidenceSearchView,
+    AgentContextBundleDetailView,
+    AgentContextBundleListCreateView,
     AgentMaterialDetailView,
     AgentMaterialListView,
     AgentMeView,
@@ -19,4 +21,6 @@ urlpatterns = [
     path("materials/<int:pk>", AgentMaterialDetailView.as_view(), name="agent-v1-material-detail"),
     path("materials/<int:pk>/external-access", MaterialExternalAccessView.as_view(), name="agent-v1-material-external-access"),
     path("evidence/search", AgentEvidenceSearchView.as_view(), name="agent-v1-evidence-search"),
+    path("context-bundles", AgentContextBundleListCreateView.as_view(), name="agent-v1-context-bundle-create"),
+    path("context-bundles/<str:bundle_id>", AgentContextBundleDetailView.as_view(), name="agent-v1-context-bundle-detail"),
 ]

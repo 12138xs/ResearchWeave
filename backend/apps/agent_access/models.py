@@ -74,3 +74,25 @@ class AgentAuditEvent(models.Model):
 
     class Meta:
         ordering = ["-created_at", "-pk"]
+
+
+def new_context_bundle_id() -> str:
+    return f"rcb_{uuid4().hex}"
+
+
+class ResearchContextBundle(models.Model):
+    bundle_id = models.CharField(max_length=36, default=new_context_bundle_id, unique=True, editable=False)
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="research_context_bundles", on_delete=models.CASCADE)
+    created_by_token = models.ForeignKey(AgentAccessToken, null=True, on_delete=models.SET_NULL)
+    schema_version = models.CharField(max_length=16, default="1.0")
+    question = models.TextField()
+    scope_json = models.JSONField(default=dict)
+    retrieval_manifest = models.JSONField(default=dict)
+    evidence_manifest = models.JSONField(default=list)
+    missing_information = models.JSONField(default=list)
+    warnings = models.JSONField(default=list)
+    content_digest = models.CharField(max_length=71)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at", "-pk"]
