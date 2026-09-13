@@ -76,6 +76,8 @@ class PersonalAccessTokenApiTests(TestCase):
         self.assertNotIn("token", listed.json()["results"][0])
         self.assertNotIn("secret_hash", listed.json()["results"][0])
         self.assertNotIn(raw, listed.content.decode())
+        audit = AgentAuditEvent.objects.get(action="token.create")
+        self.assertEqual((audit.user_id, audit.token_id, audit.status_code), (self.owner.pk, record.pk, 201))
 
     def test_unknown_or_expired_scopes_are_rejected(self):
         self.client.force_login(self.owner)

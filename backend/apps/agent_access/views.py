@@ -6,7 +6,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.agent_access.audit import AuditedAgentAPIViewMixin
+from apps.agent_access.audit import AuditedAgentAPIViewMixin, record_control_plane_event
 from apps.agent_access.authentication import PersonalAccessTokenAuthentication
 from apps.agent_access.contracts import material_evidence_reference
 from apps.agent_access.models import AgentAccessToken
@@ -69,14 +69,15 @@ class TokenListCreateView(SecureSessionAPIView):
         serializer.is_valid(raise_exception=True)
         values = serializer.validated_data
         token, raw = AgentAccessToken.issue(owner=request.user, **values)
-        return Response({**token_data(token), "token": raw}, status=201)
+        response = Response({**token_data(token), "token": raw}, status=201)
+        return record_control_plane_event(request, action="token.create", response=response, token=token)
 
 
 class TokenRevokeView(SecureSessionAPIView):
     def delete(self, request, token_id):
         token = get_object_or_404(request.user.agent_access_tokens, token_id=token_id)
         token.revoke()
-        return Response(status=204)
+        return record_control_plane_event(request, action="token.revoke", response=Response(status=204), token=token)
 
 
 class MaterialExternalAccessView(SecureSessionAPIView):
@@ -84,12 +85,13 @@ class MaterialExternalAccessView(SecureSessionAPIView):
         serializer = ExternalAccessUpdateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         material = set_external_agent_access(request.user, pk, **serializer.validated_data)
-        return Response({
+        response = Response({
             "material_id": material.pk,
             "source_kind": material.source_kind,
             "external_agent_access": material.external_agent_access,
             "changed_at": material.external_access_changed_at,
         })
+        return record_control_plane_event(request, action="material.external_access.update", response=response)
 
 
 class AgentReadAPIView(AuditedAgentAPIViewMixin, APIView):

@@ -37,6 +37,25 @@ def response_count(response):
     return count if isinstance(count, int) and count >= 0 else None
 
 
+def record_control_plane_event(request, *, action, response, token=None):
+    request_id = request_id_for(request)
+    response["X-Request-ID"] = str(request_id)
+    AgentAuditEvent.objects.create(
+        request_id=request_id,
+        user=request.user,
+        token=token,
+        client="web-session",
+        action=action,
+        method=request.method[:12],
+        path=request.path[:300],
+        status_code=response.status_code,
+        error_code=response_error_code(response),
+        returned_count=response_count(response),
+        duration_ms=0,
+    )
+    return response
+
+
 class AuditedAgentAPIViewMixin:
     audit_action = "unknown"
 
