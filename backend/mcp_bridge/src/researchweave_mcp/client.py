@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode, urlsplit
-from urllib.request import Request, urlopen
+from urllib.request import HTTPRedirectHandler, HTTPSHandler, Request, build_opener
 from uuid import uuid4
 
 from researchweave_mcp import __version__
@@ -28,6 +28,11 @@ class ResearchWeaveApiError(RuntimeError):
         self.request_id = request_id
         suffix = f" request_id={request_id}" if request_id else ""
         super().__init__(f"A510 API error ({code}, status={status}): {detail}{suffix}")
+
+
+class NoRedirectHandler(HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
 
 
 @dataclass(frozen=True)
@@ -62,9 +67,10 @@ class ClientConfig:
 
 
 class ResearchWeaveClient:
-    def __init__(self, config: ClientConfig):
+    def __init__(self, config: ClientConfig, opener=None):
         self.config = config
         self._ssl_context = ssl.create_default_context(cafile=config.ca_bundle)
+        self._opener = opener or build_opener(HTTPSHandler(context=self._ssl_context), NoRedirectHandler())
 
     @classmethod
     def from_env(cls, env=None):
@@ -87,7 +93,7 @@ class ResearchWeaveClient:
             },
         )
         try:
-            with urlopen(request, timeout=self.config.timeout_seconds, context=self._ssl_context) as response:
+            with self._opener.open(request, timeout=self.config.timeout_seconds) as response:
                 raw = response.read(MAX_RESPONSE_BYTES + 1)
                 if len(raw) > MAX_RESPONSE_BYTES:
                     raise ResearchWeaveApiError(
@@ -142,4 +148,3 @@ class ResearchWeaveClient:
 
     def get_context_bundle(self, bundle_id: str):
         return self.request("GET", f"context-bundles/{bundle_id}")
-

@@ -28,6 +28,7 @@ class ServerContractTests(unittest.IsolatedAsyncioTestCase):
         async with Client(server) as client:
             tools = await client.list_tools()
             self.assertEqual([tool.name for tool in tools.tools], ["search_materials"])
+            self.assertTrue(tools.tools[0].annotations.read_only_hint)
             result = await client.call_tool("search_materials", {"query": "FNO"})
         self.assertFalse(result.is_error)
         self.assertEqual(result.structured_content["results"][0]["title"], "FNO")
@@ -59,4 +60,3 @@ class ServerContractTests(unittest.IsolatedAsyncioTestCase):
             fetched = await client.call_tool("get_context_bundle", {"bundle_id": "rcb_test"})
         self.assertEqual(built.structured_content["bundle_id"], "rcb_test")
         self.assertEqual(fetched.structured_content["content_digest"], "sha256:test")
-
