@@ -98,7 +98,7 @@ class PersonalAccessTokenApiTests(TestCase):
         _, raw = self.issue()
         response = self.client.get("/api/v1/me", **self.auth(raw))
         self.assertEqual(response.status_code, 401)
-        self.assertEqual(response.json()["detail"]["code"], "insecure_transport")
+        self.assertEqual(response.json()["code"], "insecure_transport")
         event = AgentAuditEvent.objects.get()
         self.assertEqual((event.action, event.status_code, event.token_id), ("me.read", 401, None))
 
