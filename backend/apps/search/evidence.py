@@ -39,7 +39,7 @@ def excerpt(text, query, terms):
     return ("…" if start else "") + text[start:start + 600] + ("…" if start + 600 < len(text) else "")
 
 
-def search_evidence(user, params):
+def search_evidence(user, params, *, allowed_materials=None, include_evidence_objects=False):
     serializer = EvidenceQuery(data=params)
     serializer.is_valid(raise_exception=True)
     values = serializer.validated_data
@@ -47,7 +47,7 @@ def search_evidence(user, params):
     terms = query_terms(query)
     if not terms:
         raise serializers.ValidationError("请输入文字或数字关键词。")
-    allowed = materials(user)
+    allowed = allowed_materials if allowed_materials is not None else materials(user)
     scoped = values.get("material_id")
     if scoped:
         get_object_or_404(allowed, pk=scoped)
@@ -70,7 +70,7 @@ def search_evidence(user, params):
             continue
         counts[material.pk] += 1
         url = f"/api/materials/{material.pk}/versions/{version.pk}/file/"
-        results.append({
+        result = {
             "material_id": material.pk, "title": material.title, "version_id": version.pk,
             "version_number": version.number, "evidence_id": row.pk, "page": row.page,
             "line_start": row.line_start, "line_end": row.line_end,
@@ -78,7 +78,11 @@ def search_evidence(user, params):
             "excerpt": excerpt(row.text, query, terms), "score": row.score,
             "file_url": url + (f"#page={row.page}" if row.page else ""),
             "url": f"/materials/{material.pk}?version={version.pk}#evidence-{row.pk}",
-        })
+            "source_kind": material.source_kind,
+        }
+        if include_evidence_objects:
+            result["_evidence"] = row
+        results.append(result)
         if len(results) >= limit:
             break
     return {

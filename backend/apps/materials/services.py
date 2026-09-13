@@ -83,9 +83,13 @@ def ingest(upload, *, owner, title="", visibility="team", source_kind=SourceKind
         raise
 
 
-def set_external_agent_access(user, material_id, *, allowed):
+def set_external_agent_access(user, material_id, *, allowed, source_kind=None):
     with transaction.atomic():
         material = Material.objects.select_for_update().get(pk=material_id, owner=user)
+        if source_kind is not None:
+            if source_kind not in SourceKind.values:
+                raise ValidationError("来源类型无效。")
+            material.source_kind = source_kind
         if allowed and material.source_kind == SourceKind.UNCLASSIFIED:
             raise ValidationError("材料来源尚未分类，不能批准外部 Agent 读取。")
         material.external_agent_access = (
@@ -95,6 +99,7 @@ def set_external_agent_access(user, material_id, *, allowed):
         material.external_access_changed_at = timezone.now()
         material.save(update_fields=[
             "external_agent_access",
+            "source_kind",
             "external_access_changed_by",
             "external_access_changed_at",
         ])

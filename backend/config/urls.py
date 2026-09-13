@@ -38,4 +38,5 @@ urlpatterns = [
     path("api/", include("apps.quality.urls")),
     path("api/", include("apps.assistant.urls")),
     path("api/", include("apps.research_map.urls")),
+    path("api/v1/", include("apps.agent_access.urls")),
 ]
