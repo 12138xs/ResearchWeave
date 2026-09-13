@@ -1,0 +1,8 @@
+[mcp_servers.researchweave]
+command = "researchweave-mcp"
+env_vars = ["RWV_BASE_URL", "RWV_TOKEN", "RWV_CA_BUNDLE"]
+startup_timeout_sec = 15
+tool_timeout_sec = 60
+enabled = true
+enabled_tools = ["search_materials", "get_material", "search_evidence", "build_context_bundle", "get_context_bundle"]
+

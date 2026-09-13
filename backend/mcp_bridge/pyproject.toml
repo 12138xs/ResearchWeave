@@ -1,0 +1,17 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "researchweave-mcp"
+version = "0.1.0"
+description = "Local read-only MCP bridge for the ResearchWeave REST API"
+requires-python = ">=3.11"
+dependencies = ["mcp==2.2.0"]
+
+[project.scripts]
+researchweave-mcp = "researchweave_mcp.server:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/researchweave_mcp"]
+
