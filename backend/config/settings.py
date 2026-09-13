@@ -172,6 +172,9 @@ REST_FRAMEWORK = {
 EXTERNAL_AGENT_ACCESS_ENABLED = os.getenv("EXTERNAL_AGENT_ACCESS_ENABLED", "0").strip().lower() in {
     "1", "true", "yes", "on",
 }
+if os.getenv("TRUST_X_FORWARDED_PROTO", "0").strip().lower() in {"1", "true", "yes", "on"}:
+    # 仅在 Django 完全位于受控反向代理之后时启用。
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 STORAGE_ROOT = Path(os.getenv("STORAGE_ROOT", BASE_DIR / "storage"))
 PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "http://localhost:30888")
