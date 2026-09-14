@@ -1,10 +1,42 @@
 """Bounded reads of already discovered, fixed-version evidence."""
-from apps.assistant.knowledge import resolve_source, material_source, slice_source, source_allowed
+from apps.assistant.knowledge import resolve_source, material_source, slice_source, source_allowed, search_window
 from apps.materials.models import Evidence
+from apps.search.evidence import ranked_candidates, query_terms
 
 MAX_READ_CHARS = 3000
 MAX_EVIDENCE_CHARS = 18000
 MAX_SOURCES = 16
+
+
+def find_in_source(user, scope, source, *, query, budget=MAX_READ_CHARS):
+    """Search body text in one already-authorized immutable material version."""
+    if not isinstance(query, str) or not 1 <= len(query.strip()) <= 500 or not query_terms(query):
+        raise ValueError('定位查询必须为 1–500 字关键词')
+    if type(budget) is not int or not 1 <= budget <= MAX_READ_CHARS:
+        raise ValueError('读取预算必须为 1–3000 字')
+    current = resolve_source(source, user, scope)
+    if current['type'] != 'material':
+        return {'sources': [], 'notice': '此来源没有材料分页版本，请使用 read_evidence 读取已有正文。'}
+    rows = ranked_candidates(Evidence.objects.filter(version_id=current['version_id'], text__regex=r'\S')
+                             .select_related('version__material'), query, [('text', 10)], limit=3)
+    output, remaining = [], budget
+    for row in rows:
+        if remaining <= 0:
+            break
+        window = search_window(material_source(row), query, query_terms(query))
+        if len(window['excerpt']) > remaining:
+            window['excerpt'] = window['excerpt'][:remaining]
+            window['text_end'] = window['text_start'] + len(window['excerpt'])
+            window['truncated'] = True
+        window['next_offset'] = window['text_end'] if window['text_end'] < window['total_chars'] else None
+        window['read_mode'] = 'within_source_search'
+        if not source_allowed(window, user):
+            raise ValueError('定位期间来源发生变化')
+        output.append(window)
+        remaining -= len(window['excerpt'])
+    return {'sources': output, 'returned_chars': budget - remaining,
+            'truncated': len(output) < len(rows) or any(row['truncated'] for row in output),
+            'notice': '只在已发现的固定版本正文内匹配，最多三个片段，不表示整篇已读完。'}
 
 
 def read_source(user, scope, source, *, budget=MAX_READ_CHARS, offset=0, context=False, before=0, after=1):

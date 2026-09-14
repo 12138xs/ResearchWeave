@@ -48,6 +48,23 @@ class ReadingTests(TestCase):
             with self.assertRaises(ValueError):
                 find_in_source(user, scope, source, query=query)
 
+    @patch('apps.assistant.agent.call_minimax_chat')
+    def test_agent_finds_distant_evidence_within_shared_tool_budget(self, model):
+        Evidence.objects.create(version=self.version, ordinal=17, page=17, text='decomposition future work')
+        session = AssistantSession.objects.create(created_by=self.user, title='geometry')
+        row = AssistantExchange.objects.create(session=session, question='geometry limitations', status='queued', request_id=uuid.uuid4())
+        model.side_effect = [search('geometry'), reply(calls=[{'id': 'find-1', 'type': 'function', 'function': {
+            'name': 'find_in_source', 'arguments': json.dumps({'source_ref': 'S1', 'query': 'decomposition', 'budget': 100})}}]),
+            reply({'answer': '域分解是未来工作 [S3]。'}), reply({'answer': '域分解是未来工作 [S3]。'})]
+        run_exchange(row.pk, 1)
+        row.refresh_from_db()
+        self.assertEqual(row.status, 'completed')
+        self.assertEqual(row.sources[0]['page'], 17)
+        self.assertEqual(row.usage['tool_calls'], 2)
+        self.assertEqual(row.usage['read_calls'], 1)
+        self.assertEqual(row.usage['find_calls'], 1)
+        self.assertLessEqual(row.usage['evidence_chars'], 18000)
+
     def test_read_beyond_excerpt_and_fixed_version_context(self):
         from apps.assistant.reading import read_source
         source = self.source()
