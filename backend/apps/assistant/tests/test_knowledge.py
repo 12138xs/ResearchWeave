@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase
+from unittest.mock import patch
 
 from apps.assistant.knowledge import search_knowledge, source_allowed
 from apps.documents.models import Document, DocumentVersion
@@ -7,6 +8,14 @@ from apps.materials.models import Material, MaterialVersion, Evidence
 
 
 class KnowledgeTests(TestCase):
+    def test_query_leader_survives_repeated_translated_distractors(self):
+        original = {'type': 'document', 'id': 99, 'excerpt': '节点坐标字段'}
+        noise = [{'type': 'document', 'id': n, 'excerpt': 'unrelated node paper'} for n in range(8)]
+        with patch('apps.assistant.knowledge._search_once', side_effect=[[original], noise, noise]):
+            result = search_knowledge(self.owner, {}, '节点坐标字段', queries=['node field', 'coordinate name'])
+        self.assertEqual(result[0]['id'], 99)
+        self.assertEqual(len(result), 8)
+
     def setUp(self):
         self.owner = get_user_model().objects.create_user(username="knowledge-owner")
         self.other = get_user_model().objects.create_user(username="knowledge-other")

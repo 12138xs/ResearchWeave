@@ -165,7 +165,13 @@ def run_exchange(exchange_id, attempt):
                         if "query" not in arguments or set(arguments) - {"query", "queries"}:
                             raise ValueError("检索参数不合法")
                         usage["search_calls"] += 1
+                        if not searched:
+                            # Keep the user's language before generated translations compete for limited slots.
+                            original_query = exchange.question.strip()[:500]
+                            variants = list(dict.fromkeys([arguments['query'], *arguments.get('queries', [])]))
+                            arguments = {'query': original_query, 'queries': [q for q in variants if q != original_query][:2]}
                         rows = search_knowledge(user, scope, **arguments) if remaining else []
+                        details['executed_queries'] = [arguments['query'], *arguments.get('queries', [])]
                         searched = True
                     else:
                         permitted = ({"source_ref", "budget", "query"} if name == 'find_in_source' else

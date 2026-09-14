@@ -92,6 +92,15 @@ class AgentTests(TestCase):
         self.assertEqual(payload["sources"][0]["excerpt"], self.version.markdown)
         self.assertEqual(payload["question"], self.exchange.question)
 
+    @patch('apps.assistant.agent.call_minimax_chat')
+    def test_first_search_keeps_original_language_within_three_queries(self, model):
+        from apps.assistant.knowledge import search_knowledge
+        model.side_effect = [search('PINN English translation'), reply({'answer': '材料事实 [S1]。'}), reply({'answer': '材料事实 [S1]。'})]
+        with patch('apps.assistant.agent.search_knowledge', wraps=search_knowledge) as retrieve:
+            run_exchange(self.exchange.pk, 1)
+        self.assertEqual(retrieve.call_args.kwargs['query'], self.exchange.question)
+        self.assertEqual(retrieve.call_args.kwargs['queries'], ['PINN English translation'])
+
     @patch("apps.assistant.agent.call_minimax_chat")
     def test_cancellation_during_review_discards_both_draft_and_review(self, model):
         def respond(*args, **kwargs):

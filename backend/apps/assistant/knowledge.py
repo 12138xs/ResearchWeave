@@ -208,15 +208,17 @@ def search_knowledge(user, scope, query, queries=None):
     values = [query] + (queries or [])
     if any(not isinstance(value, str) or not value.strip() or len(value) > 500 for value in values):
         raise ValueError("检索词必须为 1–500 字")
-    fused, scores = {}, Counter()
+    fused, scores, query_leaders = {}, Counter(), []
     for value in dict.fromkeys(values):
         for rank, row in enumerate(_search_once(user, scope, value), 1):
             key = (row["type"], row["id"])
+            if rank == 1 and key not in query_leaders:
+                query_leaders.append(key)
             # Keep the first concrete excerpt and fuse ranks; reads expose further text.
             fused.setdefault(key, row)
             scores[key] += 1 / (60 + rank)
     result, counts, seen = [], Counter(), set()
-    for key in sorted(fused, key=lambda key: -scores[key]):
+    for key in query_leaders + [key for key in sorted(fused, key=lambda key: -scores[key]) if key not in query_leaders]:
         row = fused[key]
         group = ("material", row["version_sha256"]) if row["type"] == "material" else (row["type"], row["id"])
         identity = (*group, row.get("ordinal", 0))
