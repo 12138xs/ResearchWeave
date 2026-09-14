@@ -142,10 +142,10 @@ class LegacyLinkTests(TestCase):
         self.assertEqual(MaterialVersion.objects.count(), 1)
         self.assertFalse(MaterialVersion.objects.get().legacy_links.exists())
 
-    @skipUnless(os.getenv("MATERIAL_PDF_SAMPLE"), "未提供可选公开 PDF")
+    @skipUnless(os.getenv("M6B_PUBLIC_PDF_SAMPLE"), "未提供可选公开 PDF")
     def test_public_fulltext_link_search_and_original_entry(self):
         from apps.assistant.knowledge import search_knowledge
-        paper = self.paper(content=Path(os.environ["MATERIAL_PDF_SAMPLE"]).read_bytes())
+        paper = self.paper(content=Path(os.environ["M6B_PUBLIC_PDF_SAMPLE"]).read_bytes())
         self.assertEqual(self.run_link()[0]["status"], "available")
         self.assertEqual(self.run_link(True)[0]["status"], "linked")
         self.run_link(True)
