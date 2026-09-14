@@ -48,6 +48,27 @@ class AgentTests(TestCase):
         feedback = json.loads(model.call_args_list[1].args[0][-1]["content"])
         self.assertEqual(feedback["error"], "round_tool_limit")
 
+    @patch('apps.assistant.agent.call_minimax_chat')
+    def test_unknown_source_can_be_corrected_without_execution_or_extra_budget(self, model):
+        responses = iter([reply(calls=[{'id': 'wrong', 'type': 'function', 'function': {
+            'name': 'find_in_source', 'arguments': json.dumps({'source_ref': 'S999', 'query': 'PINN'})}}]),
+            search(), reply({'answer': '残差损失 [S1]。'}), reply({'answer': '残差损失 [S1]。'})])
+        seen = []
+        def respond(messages, **kwargs):
+            seen.append(json.loads(json.dumps(messages)))
+            return next(responses)
+        model.side_effect = respond
+        with patch('apps.assistant.agent.find_in_source') as locate:
+            run_exchange(self.exchange.pk, 1)
+        self.exchange.refresh_from_db()
+        self.assertEqual(self.exchange.status, 'completed')
+        locate.assert_not_called()
+        self.assertEqual(self.exchange.usage['invalid_tool_calls'], 1)
+        self.assertEqual(self.exchange.usage['tool_calls'], 2)
+        self.assertEqual(self.exchange.usage['search_calls'], 1)
+        feedback = json.loads(seen[1][-1]['content'])
+        self.assertEqual(feedback['error'], 'unknown_source_ref')
+
     @patch("apps.assistant.agent.call_minimax_chat")
     def test_last_round_explicitly_disables_tools_and_requests_answer(self, model):
         model.side_effect = [search(), search(), search(), reply({"answer": "残差与边界损失 [S1]。"}), reply({"answer": "已审校 [S1]。"})]

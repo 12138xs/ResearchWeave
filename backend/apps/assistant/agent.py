@@ -13,6 +13,7 @@ from apps.assistant.services import update_execution
 from apps.tasks.models import TaskRecord
 from apps.assistant.workspace_selectors import personal_context
 from apps.assistant.attribution import review_sources, validate_attribution
+from apps.assistant.tool_inputs import validated_arguments
 
 
 TOOLS = [{"type": "function", "function": {
@@ -145,15 +146,20 @@ def run_exchange(exchange_id, attempt):
                     if name not in {"search_knowledge", "read_evidence", "read_context", "find_in_source"} or not isinstance(call.get("id"), str) or call["id"] in seen_ids:
                         raise ValueError("工具不允许")
                     seen_ids.add(call["id"])
-                    arguments = json.loads(function.get("arguments", "{}"))
-                    if not isinstance(arguments, dict):
-                        raise ValueError("工具参数不合法")
                     if index >= 2:
                         messages.append({"role": "tool", "tool_call_id": call["id"], "content": json.dumps({
                             "sources": [], "error": "round_tool_limit", "message": "本轮最多执行两个工具，本次未执行。"}, ensure_ascii=False)})
                         continue
                     remaining = MAX_EVIDENCE_CHARS - usage["evidence_chars"]
                     usage["tool_calls"] += 1
+                    try:
+                        arguments = validated_arguments(name, function.get('arguments', '{}'), sources)
+                    except ValueError as error:
+                        usage['invalid_tool_calls'] = usage.get('invalid_tool_calls', 0) + 1
+                        messages.append({'role': 'tool', 'tool_call_id': call['id'], 'content': json.dumps({
+                            'sources': [], 'error': str(error),
+                            'message': '本次未执行。请按工具定义修正参数；先 search_knowledge，再使用本轮已返回的 source_ref。错误调用也占用工具预算。'}, ensure_ascii=False)})
+                        continue
                     details = {}
                     if name == "search_knowledge":
                         if "query" not in arguments or set(arguments) - {"query", "queries"}:
