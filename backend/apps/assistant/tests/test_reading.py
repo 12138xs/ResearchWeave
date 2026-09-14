@@ -177,6 +177,13 @@ class ReadingTests(TestCase):
         with self.assertRaises(ValueError):
             read_source(self.user, {}, source, offset=source['total_chars']+1)
 
+    def test_whitespace_only_page_is_not_a_search_candidate(self):
+        from apps.search.evidence import search_evidence
+        self.first.text = ' \n\t'
+        self.first.save()
+        self.assertNotIn(self.first.pk, [row['id'] for row in search_knowledge(self.user, {}, 'geometry')])
+        self.assertNotIn(self.first.pk, [row['evidence_id'] for row in search_evidence(self.user, {'q': 'geometry'})['results']])
+
 
 @skipUnless(os.getenv("RWV_M6C_LIVE") == "1", "需显式启用服务器冻结代表题")
 class FrozenReadingTests(TestCase):

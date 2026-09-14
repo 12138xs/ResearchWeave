@@ -102,4 +102,4 @@ def visible_evidence(user):
     latest = MaterialVersion.objects.filter(material_id=OuterRef("version__material_id"),
         status__in=["ready", "needs_review"]).order_by("-number").values("pk")[:1]
     return Evidence.objects.filter(version__material_id__in=materials(user).values("pk"),
-        version_id=Subquery(latest)).exclude(text="").select_related("version__material")
+        version_id=Subquery(latest), text__regex=r"\S").select_related("version__material")
