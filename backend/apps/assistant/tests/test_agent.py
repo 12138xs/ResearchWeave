@@ -197,6 +197,8 @@ class AgentTests(TestCase):
 
     @patch("apps.assistant.agent.call_minimax_chat")
     def test_no_match_has_deterministic_insufficient_answer(self, model):
+        self.exchange.question = 'zzzz_nomatch'
+        self.exchange.save(update_fields=['question'])
         model.side_effect = [search("zzzz_nomatch"), reply({"answer": "invented"})]
         run_exchange(self.exchange.pk, 1)
         self.exchange.refresh_from_db()
