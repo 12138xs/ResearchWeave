@@ -80,3 +80,7 @@ class AssistantSessionSerializer(serializers.ModelSerializer):
 class AssistantMessageInputSerializer(serializers.Serializer):
     question = serializers.CharField(max_length=4000, trim_whitespace=True)
     request_id = serializers.UUIDField()
+
+
+class AssistantStartInputSerializer(AssistantMessageInputSerializer):
+    scope_json = serializers.JSONField(default=dict)

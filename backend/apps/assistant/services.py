@@ -102,3 +102,20 @@ def control_exchange(exchange, action, attempt):
             transaction.on_commit(lambda: _publish(exchange))
     exchange.refresh_from_db()
     return exchange
+
+
+def start_conversation(user, *, question, request_id, scope_json):
+    """First message is the idempotency key; a lost response cannot orphan sessions."""
+    from apps.assistant.serializers import validate_scope
+    with transaction.atomic():
+        get_user_model().objects.select_for_update().get(pk=user.pk, is_active=True)
+        validate_scope(scope_json, user)
+        existing = AssistantExchange.objects.select_related('session').filter(
+            session__created_by=user, request_id=request_id).order_by('pk').first()
+        if existing:
+            if existing.question != question or existing.session.scope_json != scope_json:
+                raise Conflict('同一请求编号不能用于不同问题或范围。')
+            return existing.session
+        session = AssistantSession.objects.create(created_by=user, title=question[:80], scope_json=scope_json)
+        create_assistant_exchange(session, question, request_id)
+    return session

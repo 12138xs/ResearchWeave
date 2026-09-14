@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from django.urls import path
 
-from apps.assistant.views import AssistantExchangeView, AssistantProgressView, AssistantMessageView, AssistantSessionDetailView, AssistantSessionListView
+from apps.assistant.views import AssistantStartView, AssistantExchangeView, AssistantProgressView, AssistantMessageView, AssistantSessionDetailView, AssistantSessionListView
 from apps.assistant.workspace_views import ProfileView, EntryListView, EntryDetailView, PublishEntryView, PublicationListView, PublicationDetailView, WorkspaceExportView
 
 
 urlpatterns = [
+    path("assistant/start/", AssistantStartView.as_view(), name="assistant-start"),
     path("assistant/workspace/profile/", ProfileView.as_view()),
     path("assistant/workspace/entries/", EntryListView.as_view()),
     path("assistant/workspace/entries/<int:pk>/", EntryDetailView.as_view()),

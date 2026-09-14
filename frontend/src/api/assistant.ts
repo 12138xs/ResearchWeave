@@ -24,3 +24,7 @@ export function sendAssistantMessage(sessionId: number, question: string, reques
 export function controlAssistantExchange(exchange: AssistantExchange, action: 'cancel' | 'retry') {
   return request<AssistantExchange>(`/api/assistant/sessions/${exchange.session}/exchanges/${exchange.id}/`, { action, attempt: exchange.attempt });
 }
+
+export function startAssistantConversation(question: string, requestId: string, scope: Record<string, unknown>) {
+  return request<AssistantSession>('/api/assistant/start/', { question, request_id: requestId, scope_json: scope });
+}

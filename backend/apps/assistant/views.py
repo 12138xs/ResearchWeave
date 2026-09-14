@@ -97,3 +97,15 @@ class AssistantProgressView(AssistantExchangeView):
         response["Cache-Control"] = "no-store"
         response["X-Accel-Buffering"] = "no"
         return response
+
+
+class AssistantStartView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        from apps.assistant.serializers import AssistantStartInputSerializer
+        from apps.assistant.services import start_conversation
+        values = AssistantStartInputSerializer(data=request.data)
+        values.is_valid(raise_exception=True)
+        session = start_conversation(request.user, **values.validated_data)
+        return Response(AssistantSessionSerializer(session).data, status=status.HTTP_202_ACCEPTED)

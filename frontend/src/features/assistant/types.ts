@@ -3,7 +3,7 @@ export type AssistantExchange = {
   session: number;
   question: string;
   answer: string;
-  sources: Array<{ label: string; title: string; location: string; excerpt: string; url: string; sha256: string }>;
+  sources: Array<{ label: string; title: string; location: string; excerpt: string; url: string; sha256: string; source_kind?: string; text_start?: number; text_end?: number; total_chars?: number; truncated?: boolean; read_mode?: string }>;
   status: 'queued' | 'running' | 'completed' | 'failed' | 'cancelled';
   attempt: number;
   progress: string;
