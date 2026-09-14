@@ -43,7 +43,7 @@ def read_source(user, scope, source, *, budget=MAX_READ_CHARS, offset=0, context
             'returned_chars': budget - remaining, 'notice': '相邻页/片段不等于章节或整篇全文。' if context else '仅返回指定固定证据的有界正文。'}
 
 
-def register_sources(registry, rows, remaining):
+def register_sources(registry, rows, remaining, *, max_sources=MAX_SOURCES):
     """Charge every emitted excerpt, including repeats; never silently replace a citation."""
     output, used, limited = [], 0, False
     for original in rows:
@@ -61,7 +61,7 @@ def register_sources(registry, rows, remaining):
         label = next((label for label, value in registry.items()
                       if (value['type'], value['id'], value.get('text_start', 0), value['excerpt']) == key), None)
         if label is None:
-            if len(registry) >= MAX_SOURCES:
+            if len(registry) >= max_sources:
                 limited = True
                 continue
             label = f'S{len(registry) + 1}'

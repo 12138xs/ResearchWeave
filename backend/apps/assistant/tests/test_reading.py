@@ -139,6 +139,44 @@ class ReadingTests(TestCase):
         self.assertEqual(model.call_count, 2)
         self.assertEqual(exchange.answer, '')
 
+    def test_discovery_reserves_capacity_for_later_read_fragments(self):
+        from apps.assistant.reading import register_sources
+        from apps.assistant.knowledge import source_payload
+        registry = {}
+        rows = [source_payload('document', i, '检索', 'short', '固定版本') for i in range(1, 17)]
+        _, _, limited = register_sources(registry, rows, 18000, max_sources=10)
+        self.assertTrue(limited)
+        self.assertEqual(len(registry), 10)
+        output, _, _ = register_sources(registry, [source_payload('document', 1, '补读', 'longer complete evidence', '固定版本')], 17000)
+        self.assertEqual(output[0]['label'], 'S11')
+        self.assertEqual(registry['S1']['excerpt'], 'short')
+
+    def test_shared_ranking_and_linked_paper_scope(self):
+        from apps.search.evidence import search_evidence
+        from apps.materials.models import LegacyPaperLink
+        from apps.papers.models import Paper
+        paper = Paper.objects.create(title='geometry paper', abstract='geometry abstract')
+        LegacyPaperLink.objects.create(paper=paper, version=self.version, original_sha256=self.version.sha256)
+        rows = search_knowledge(self.user, {'paper_ids': [paper.pk]}, 'geometry')
+        self.assertTrue(any(row['type'] == 'material' for row in rows))
+        other_rows = search_knowledge(self.other, {'paper_ids': [paper.pk]}, 'geometry')
+        self.assertFalse(any(row['type'] == 'material' for row in other_rows))
+        api_rows = search_evidence(self.user, {'q': 'geometry', 'limit': 8})['results']
+        agent_rows = search_knowledge(self.user, {'material_ids': [self.material.pk]}, 'geometry')
+        self.assertEqual([row['evidence_id'] for row in api_rows], [row['id'] for row in agent_rows])
+
+    def test_query_and_neighbor_bounds_are_not_advisory(self):
+        from apps.assistant.reading import read_source
+        source = self.source()
+        with self.assertRaises(ValueError):
+            search_knowledge(self.user, {}, 'geometry', queries=['a', 'b', 'c'])
+        with self.assertRaises(ValueError):
+            search_knowledge(self.user, {}, 'geometry', queries=[123])
+        with self.assertRaises(ValueError):
+            read_source(self.user, {}, source, context=True, after=3)
+        with self.assertRaises(ValueError):
+            read_source(self.user, {}, source, offset=source['total_chars']+1)
+
 
 @skipUnless(os.getenv("RWV_M6C_LIVE") == "1", "需显式启用服务器冻结代表题")
 class FrozenReadingTests(TestCase):
