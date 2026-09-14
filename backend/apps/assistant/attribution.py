@@ -24,7 +24,7 @@ def validate_attribution(answer, sources):
     qualifiers still require evaluation against the evidence.
     """
     for sentence in re.split(r'[。！？\n]', answer):
-        if not re.search(r'原文(?:[\s，,:：]|采用|使用|明确|指出|提到|报告|已经|在|中|主要|仅|只)', sentence):
+        if not re.search(r'原文(?:采用|使用|明确|指出|提到|报告|已经|在|中|主要|仅|只)', sentence):
             continue
         labels = re.findall(r'\[(S\d+)\]', sentence)
         if not labels:

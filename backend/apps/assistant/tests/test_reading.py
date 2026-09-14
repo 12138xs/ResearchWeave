@@ -28,6 +28,26 @@ class ReadingTests(TestCase):
     def source(self):
         return search_knowledge(self.user, {}, 'geometry')[0]
 
+    def test_find_in_source_reaches_distant_evidence_without_switching_version(self):
+        from apps.assistant.reading import find_in_source
+        source = self.source()
+        Evidence.objects.create(version=self.version, ordinal=17, page=17, text='topology appendix: decomposition is future work')
+        new = MaterialVersion.objects.create(material=self.material, number=2, sha256='b'*64,
+            filename='paper.pdf', format='pdf', size=100, status='ready', created_by=self.user)
+        Evidence.objects.create(version=new, ordinal=17, page=17, text='topology appendix NEW VERSION')
+        result = find_in_source(self.user, {}, source, query='appendix decomposition', budget=50)
+        self.assertEqual(result['sources'][0]['page'], 17)
+        self.assertTrue(all(row['version_id'] == self.version.pk for row in result['sources']))
+        self.assertLessEqual(sum(len(row['excerpt']) for row in result['sources']), 50)
+
+    def test_find_in_source_checks_permissions_scope_and_parameters(self):
+        from apps.assistant.reading import find_in_source
+        source = self.source()
+        for user, scope, query in [(self.other, {}, 'topology'), (self.user, {'material_ids': []}, 'topology'),
+                                   (self.user, {}, ''), (self.user, {}, ['topology'])]:
+            with self.assertRaises(ValueError):
+                find_in_source(user, scope, source, query=query)
+
     def test_read_beyond_excerpt_and_fixed_version_context(self):
         from apps.assistant.reading import read_source
         source = self.source()

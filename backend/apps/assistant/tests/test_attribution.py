@@ -32,3 +32,7 @@ class AttributionTests(TestCase):
         self.assertIn('摘要', result[2]['attribution_rule'])
         self.assertEqual(self.sources['S1']['attribution_rule'], 'pretend fulltext')
         self.assertEqual(result[1]['excerpt'], self.sources['S2']['excerpt'])
+
+    def test_warning_about_secondary_source_is_not_a_fulltext_claim(self):
+        validate_attribution('这是整理卡，不能当作论文原文 [S1]。', self.sources)
+        validate_attribution('需进一步核对论文原文 [S3]。', self.sources)
