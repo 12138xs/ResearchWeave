@@ -86,6 +86,18 @@ class AgentTests(TestCase):
         self.assertEqual(self.exchange.answer, "")
 
     @patch("apps.assistant.agent.call_minimax_chat")
+    def test_review_cannot_publish_fulltext_claim_from_unclassified_document(self, model):
+        model.side_effect = [search(), reply({"answer": "材料包含残差 [S1]。"}),
+                             reply({"answer": "PINN 原文采用残差损失 [S1]。"})]
+        run_exchange(self.exchange.pk, 1)
+        self.exchange.refresh_from_db()
+        self.assertEqual(self.exchange.status, "failed")
+        self.assertEqual(self.exchange.answer, "")
+        self.assertEqual(self.exchange.usage["failure_stage"], "answer_validation")
+        payload = json.loads(model.call_args.args[0][-1]["content"])
+        self.assertIn('attribution_rule', payload['sources'][0])
+
+    @patch("apps.assistant.agent.call_minimax_chat")
     def test_serialized_tool_markup_is_never_an_answer(self, model):
         model.side_effect = [search(), reply({"answer": "<tool_call>search_knowledge [S1]</tool_call>"})]
         run_exchange(self.exchange.pk, 1)
