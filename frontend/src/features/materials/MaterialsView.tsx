@@ -7,18 +7,22 @@ import { Header } from '../../components/Header';
 
 type Version = {
   id: number; number: number; filename: string; format: string; status: string;
-  error: string; warnings: string[]; file_url: string;
+  retrieval_status: string; error: string; warnings: string[]; file_url: string;
 };
-type Material = { id: number; title: string; visibility: string; can_edit: boolean; versions: Version[] };
+type Material = { id: number; title: string; visibility: string; can_classify?: boolean; source_kind?: string; source_kind_label?: string; legacy_paper_ids?: number[]; can_edit: boolean; versions: Version[] };
 type Evidence = { id: number; ordinal: number; page: number | null; line_start: number | null; line_end: number | null; text: string; review_required: boolean; reviewed_at: string | null };
 type Detail = Version & { evidence: Evidence[]; cards: { id: number; title: string; markdown: string; evidence_ids: number[] }[] };
 const emptyList = { count: 0, results: [] as Material[] };
 const emptyMaterial: Material = { id: 0, title: '', visibility: '', can_edit: false, versions: [] };
 const labels: Record<string, string> = { queued: '等待解析', processing: '正在解析', ready: '可用', needs_review: '待核对', failed: '解析失败' };
 
+const sourceKinds: Record<string, string> = { unclassified: '未分类', paper_fulltext: '论文原文', paper_abstract: '论文摘要', human_record: '人工记录', derived_research_card: '衍生整理卡', agent_summary: 'Agent 摘要', experiment_plan: '实验计划', experiment_observation: '实验观察', experiment_interpretation: '实验解释', code_reference: '代码引用' };
+const retrievalLabels: Record<string, string> = { unavailable: '暂不可检索', no_text: '无可检索正文', searchable_review: '可检索，需核对原文', searchable: '正文可检索' };
+
 function Upload({ material, onComplete }: { material?: Material; onComplete: () => void }) {
   const [files, setFiles] = useState<File[]>([]);
   const [visibility, setVisibility] = useState('team');
+  const [sourceKind, setSourceKind] = useState('unclassified');
   const [busy, setBusy] = useState(false);
   const [results, setResults] = useState<string[]>([]);
   const upload = async () => {
@@ -29,6 +33,7 @@ function Upload({ material, onComplete }: { material?: Material; onComplete: () 
         const form = new FormData();
         form.append('file', file);
         form.append('visibility', visibility);
+        form.append('source_kind', material?.source_kind ?? sourceKind);
         const result = await submit(material ? `/api/materials/${material.id}/versions/` : '/api/materials/', form);
         setResults((old) => [...old, `${file.name}：${result.created ? '已保存' : '已存在，未重复入库'}${result.version?.status === 'failed' ? '；解析失败，可稍后重试' : ''}`]);
       } catch (error) {
@@ -43,6 +48,9 @@ function Upload({ material, onComplete }: { material?: Material; onComplete: () 
     <p>支持 PDF、UTF-8 Markdown，每份不超过 25 MB。原文件和旧版本会保留。请勿加入涉密材料。</p>
     <label>选择文件<input type="file" accept=".pdf,.md,.markdown" multiple={!material} disabled={busy}
       onChange={(event) => setFiles(Array.from(event.target.files ?? []).slice(0, 20))} /></label>
+    {!material && <label>来源类型<select value={sourceKind} disabled={busy} onChange={(event) => setSourceKind(event.target.value)}>
+      {Object.entries(sourceKinds).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+    </select></label>}
     {!material && <label>可见范围<select value={visibility} disabled={busy} onChange={(event) => setVisibility(event.target.value)}>
       <option value="team">团队共享</option><option value="private">仅本人</option>
     </select></label>}
@@ -68,7 +76,7 @@ export function MaterialsView() {
       <p>共 {data.count} 份材料。已有论文库与知识文档仍可从原入口访问。</p>
       {data.results.map((material) => <article className="experiment-project-row" key={material.id}>
         <Link to={`/materials/${material.id}`}>{material.title}</Link>
-        <p>{material.visibility === 'private' ? '仅本人' : '团队共享'} · {material.versions.length} 个版本 · {labels[material.versions[0]?.status] ?? '等待登记'}</p>
+        <p>{material.visibility === 'private' ? '仅本人' : '团队共享'} · {material.versions.length} 个版本 · {labels[material.versions[0]?.status] ?? '等待登记'} · {material.source_kind_label ?? '未分类'} · {material.versions[0]?.format.toUpperCase()} · {retrievalLabels[material.versions[0]?.retrieval_status] ?? '暂不可检索'}</p>
       </article>)}
       <div className="inline-actions">
         <button type="button" disabled={page === 1} onClick={() => setPage(page - 1)}>上一页</button>
@@ -122,6 +130,7 @@ function VersionEvidence({ material, version, reload, refresh }: { material: Mat
   if (loading) return <p>正在读取版本证据…</p>;
   if (error || !data) return <p role="alert">证据暂时无法读取，请刷新重试。</p>;
   return <section>
+    <p>{material.source_kind_label ?? '未分类'} · {data.format.toUpperCase()} · {retrievalLabels[data.retrieval_status]}</p>
     <h2>版本 {data.number} · {labels[data.status]}</h2>
     <a href={data.file_url} target="_blank" rel="noreferrer">打开此版本原文件：{data.filename}</a>
     {data.warnings.map((warning) => <p key={warning}>{warning}</p>)}
@@ -158,6 +167,29 @@ function VersionEvidence({ material, version, reload, refresh }: { material: Mat
   </section>;
 }
 
+function Classification({ material, refresh }: { material: Material; refresh: () => void }) {
+  const [kind, setKind] = useState(material.source_kind ?? 'unclassified');
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState('');
+  const save = async () => {
+    setBusy(true);
+    try {
+      await submit(`/api/materials/${material.id}/classification/`, { source_kind: kind });
+      setMessage('来源类型已保存。');
+      refresh();
+    } catch (error) { setMessage(error instanceof Error ? error.message : '保存失败。'); }
+    finally { setBusy(false); }
+  };
+  return <section>
+    <p>当前来源：{material.source_kind_label ?? '未分类'}。请按实际内容分类，整理卡和模型摘要不能标为论文原文。</p>
+    {material.can_classify && <><label>来源类型<select value={kind} disabled={busy} onChange={(event) => setKind(event.target.value)}>
+      {Object.entries(sourceKinds).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+    </select></label><button type="button" disabled={busy} onClick={save}>保存来源类型</button></>}
+    <p role="status">{message}</p>
+    {(material.legacy_paper_ids ?? []).map((paperId) => <Link key={paperId} to={`/papers/${paperId}`}>原论文条目 {paperId} </Link>)}
+  </section>;
+}
+
 export function MaterialDetailView() {
   const { id } = useParams();
   const [reload, setReload] = useState(0);
@@ -171,6 +203,7 @@ export function MaterialDetailView() {
     <Header eyebrow="" title={loading ? '正在读取材料…' : error ? '材料不可用' : data.title} description="每条证据绑定原文件版本，更新材料不会改变旧引用。" />
     {error && <p role="alert">材料不存在、无权访问或读取失败。</p>}
     {!loading && !error && <>
+      <Classification key={`${data.id}:${data.source_kind}`} material={data} refresh={refresh} />
       {data.can_edit && <Upload material={data} onComplete={refresh} />}
       <div className="inline-actions">
         <label>原文件版本<select value={version?.id ?? ''} onChange={(event) => setParams({ version: event.target.value })}>

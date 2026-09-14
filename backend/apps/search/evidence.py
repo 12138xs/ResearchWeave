@@ -71,7 +71,7 @@ def search_evidence(user, params):
         counts[material.pk] += 1
         url = f"/api/materials/{material.pk}/versions/{version.pk}/file/"
         results.append({
-            "material_id": material.pk, "title": material.title, "version_id": version.pk,
+            "source_kind": material.source_kind, "material_id": material.pk, "title": material.title, "version_id": version.pk,
             "version_number": version.number, "evidence_id": row.pk, "page": row.page,
             "line_start": row.line_start, "line_end": row.line_end,
             "review_required": row.review_required, "reviewed_at": row.reviewed_at,

@@ -1,8 +1,9 @@
 from io import BytesIO, StringIO
 import json
+import os
+from unittest import skipUnless
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
@@ -108,3 +109,50 @@ class LegacyLinkTests(TestCase):
         other = get_user_model().objects.create_user(username='other')
         self.client.force_login(other)
         self.assertEqual(self.client.get(f'/api/materials/{version.material_id}/').status_code, 404)
+
+    def test_shared_duplicate_revision_does_not_advance_other_paper(self):
+        first = self.paper()
+        second = self.paper('objects/pdf/copy.pdf')
+        self.run_link(True)
+        old = MaterialVersion.objects.get()
+        (Path(self.temp.name) / first.source_pdf_path).write_bytes(self.pdf + b'\n% changed\n')
+        self.run_link(True)
+        self.assertEqual(Material.objects.count(), 2)
+        self.assertEqual(second.material_links.get().version_id, old.pk)
+        self.assertEqual(old.material.versions.count(), 1)
+
+    def test_only_owner_can_classify_and_search_keeps_kind(self):
+        from apps.assistant.knowledge import search_knowledge
+        version, _ = ingest(SimpleUploadedFile('notes.md', b'PDE convergence'), owner=self.owner)
+        parse_version(version.pk)
+        url = f'/api/materials/{version.material_id}/classification/'
+        self.assertEqual(self.client.post(url, {'source_kind': 'derived_research_card'}).status_code, 200)
+        row = next(r for r in search_knowledge(self.owner, {}, 'convergence') if r['type'] == 'material')
+        self.assertEqual(row['source_kind'], 'derived_research_card')
+        other = get_user_model().objects.create_user(username='admin2', is_staff=True)
+        self.client.force_login(other)
+        self.assertEqual(self.client.post(url, {'source_kind': 'paper_fulltext'}).status_code, 404)
+        self.client.force_login(self.owner)
+        self.assertEqual(self.client.post(url, {'source_kind': 'invented'}).status_code, 400)
+
+    def test_existing_unknown_duplicate_requires_review(self):
+        ingest(SimpleUploadedFile('unknown.pdf', self.pdf), owner=self.owner)
+        self.paper()
+        self.assertEqual(self.run_link(True)[0]['status'], 'source_conflict')
+        self.assertEqual(MaterialVersion.objects.count(), 1)
+        self.assertFalse(MaterialVersion.objects.get().legacy_links.exists())
+
+    @skipUnless(os.getenv("MATERIAL_PDF_SAMPLE"), "未提供可选公开 PDF")
+    def test_public_fulltext_link_search_and_original_entry(self):
+        from apps.assistant.knowledge import search_knowledge
+        paper = self.paper(content=Path(os.environ["MATERIAL_PDF_SAMPLE"]).read_bytes())
+        self.assertEqual(self.run_link()[0]["status"], "available")
+        self.assertEqual(self.run_link(True)[0]["status"], "linked")
+        self.run_link(True)
+        version = MaterialVersion.objects.get()
+        self.assertTrue(version.evidence.filter(text__icontains="physics").exists())
+        rows = search_knowledge(self.owner, {}, "physics")
+        self.assertTrue(any(row["type"] == "material" and row["source_kind"] == "paper_fulltext" for row in rows))
+        self.assertEqual(self.client.get(f"/api/papers/{paper.pk}/pdf/").status_code, 200)
+        data = self.client.get(f"/api/materials/{version.material_id}/").json()
+        self.assertEqual(data["versions"][0]["retrieval_status"], "searchable_review")

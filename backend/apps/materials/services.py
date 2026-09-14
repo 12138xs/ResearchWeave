@@ -14,6 +14,7 @@ from rest_framework.exceptions import ValidationError
 
 from apps.common.permissions import Visibility, editable_by
 from apps.materials.models import Evidence, Material, MaterialVersion, ResearchCard
+from apps.agent_access.contracts import SourceKind
 from apps.materials.selectors import get_version
 from apps.storage.provider import get_storage_provider
 from apps.tasks.models import TaskRecord
@@ -24,7 +25,9 @@ MAX_TEXT = 4_000_000
 PARSER_VERSION = "pypdf6-markdown-lines-v1"
 
 
-def ingest(upload, *, owner, title="", visibility="team", material=None):
+def ingest(upload, *, owner, title="", visibility="team", material=None, source_kind="unclassified"):
+    if source_kind not in SourceKind.values:
+        raise ValidationError("来源类型无效。")
     suffix = Path(upload.name).suffix.lower()
     if suffix not in {".pdf", ".md", ".markdown"}:
         raise ValidationError("只支持 PDF 和 UTF-8 Markdown 文件。")
@@ -55,7 +58,7 @@ def ingest(upload, *, owner, title="", visibility="team", material=None):
             if duplicate:
                 return duplicate, False
             if material is None:
-                material = Material.objects.create(title=(title.strip() or Path(upload.name).stem)[:500], owner=owner, visibility=visibility)
+                material = Material.objects.create(title=(title.strip() or Path(upload.name).stem)[:500], owner=owner, visibility=visibility, source_kind=source_kind)
             number = (material.versions.aggregate(n=Max("number"))["n"] or 0) + 1
             storage_key = f"objects/materials/{uuid4().hex}{'.pdf' if suffix == '.pdf' else '.md'}"
             target = get_storage_provider().resolve(storage_key)

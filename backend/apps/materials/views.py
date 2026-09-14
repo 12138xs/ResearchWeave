@@ -1,3 +1,5 @@
+from django.db import transaction
+from apps.agent_access.contracts import SourceKind
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404
 from rest_framework.exceptions import ValidationError
@@ -16,7 +18,8 @@ def upload_response(request, material=None):
     serializer.is_valid(raise_exception=True)
     values = serializer.validated_data
     version, created = ingest(values["file"], owner=request.user, title=values["title"],
-                              visibility=material.visibility if material else values["visibility"], material=material)
+                              visibility=material.visibility if material else values["visibility"], material=material,
+                              source_kind=values["source_kind"])
     if created:
         enqueue(version.pk)
     version.refresh_from_db()
@@ -47,6 +50,24 @@ class MaterialDetail(APIView):
 
     def get(self, request, pk):
         return Response(material_data(get_object_or_404(materials(request.user).prefetch_related("versions"), pk=pk), request.user))
+
+
+class MaterialClassification(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        kind = request.data.get("source_kind")
+        if kind not in SourceKind.values:
+            raise ValidationError("请选择有效来源类型。")
+        with transaction.atomic():
+            material = get_object_or_404(materials(request.user).select_for_update(), pk=pk, owner=request.user)
+            material.source_kind = kind
+            # Reclassification cannot implicitly authorize a different external disclosure.
+            material.external_agent_access = "blocked"
+            material.external_access_changed_by = None
+            material.external_access_changed_at = None
+            material.save(update_fields=["source_kind", "external_agent_access", "external_access_changed_by", "external_access_changed_at"])
+        return Response(material_data(material, request.user))
 
 
 class VersionUpload(APIView):

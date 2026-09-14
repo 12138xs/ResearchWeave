@@ -1,7 +1,9 @@
 from rest_framework import serializers
+from apps.agent_access.contracts import SourceKind
 
 
 class UploadSerializer(serializers.Serializer):
+    source_kind = serializers.ChoiceField(choices=SourceKind.choices, default=SourceKind.UNCLASSIFIED)
     file = serializers.FileField()
     title = serializers.CharField(max_length=500, required=False, default="", allow_blank=True)
     visibility = serializers.ChoiceField(choices=["team", "private"], default="team")

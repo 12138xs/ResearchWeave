@@ -62,11 +62,11 @@ def search_knowledge(user, scope, query):
         return []
     rows = []
 
-    def add(kind, pk, title, text, location, url=""):
+    def add(kind, pk, title, text, location, url="", source_kind="unclassified"):
         if not text.strip():
             return
         rows.append({"type": kind, "id": pk, "title": title, "location": location,
-                     "excerpt": excerpt(text, query, terms), "url": url,
+                     "source_kind": source_kind, "excerpt": excerpt(text, query, terms), "url": url,
                      "sha256": hashlib.sha256(text.encode()).hexdigest()})
 
     evidence = visible_evidence(user)
@@ -80,14 +80,15 @@ def search_knowledge(user, scope, query):
         if row.review_required and not row.reviewed_at:
             location += "，提取内容待人工核对"
         add("material", row.pk, row.version.material.title, row.text, location,
-            f"/materials/{row.version.material_id}?version={row.version_id}#evidence-{row.pk}")
+            f"/materials/{row.version.material_id}?version={row.version_id}#evidence-{row.pk}",
+            source_kind=row.version.material.source_kind)
     documents = _scoped(DocumentVersion.objects.filter(is_current=True).select_related("document"), scope,
                         "document_ids", "document_id", "document__space_id")
     for row in _matches(documents, terms, ["markdown", "document__title"])[:4]:
         add("document", row.pk, row.document.title, row.markdown, f"文档版本 {row.version}，引用时正文摘录")
     papers = _scoped(Paper.objects.all(), scope, "paper_ids")
     for row in _matches(papers, terms, ["title", "abstract"])[:4]:
-        add("paper", row.pk, row.title, row.abstract, "论文摘要，非全文；引用时快照")
+        add("paper", row.pk, row.title, row.abstract, "论文摘要，非全文；引用时快照", source_kind="paper_abstract")
     experiments = _scoped(accessible_experiments(user), scope, "experiment_ids")
     for row in _matches(experiments, terms, ["title", "objective", "protocol_markdown"])[:4]:
         add("experiment", row.pk, row.title, row.objective + "\n" + row.protocol_markdown,
