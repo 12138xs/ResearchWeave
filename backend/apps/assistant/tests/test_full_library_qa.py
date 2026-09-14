@@ -87,7 +87,7 @@ def seed_dataset(data, user, other):
             continue
         owner = other if record.get("owner") == "other" else user
         material = Material.objects.create(title=record["title"], owner=owner,
-                                           visibility=record.get("visibility", "team"))
+                                           visibility=record.get("visibility", "team"), source_kind=record["source_kind"])
         for number, chunks in enumerate(record.get("versions", [record["chunks"]]), 1):
             version = MaterialVersion.objects.create(material=material, number=number,
                 sha256=digest(chunks), filename="fixture.md", format="md", size=1,
@@ -107,9 +107,9 @@ def measure_case(case, refs, user, model_call=None):
     from apps.ai.minimax import call_minimax_chat
     real_call = model_call or call_minimax_chat
     trace, transmitted = [], []
-    def retrieve(actor, scope, query):
-        rows = search_knowledge(actor, scope, query)
-        trace.append({"query": query, "keys": list(dict.fromkeys(refs[(r["type"], r["id"])] for r in rows)),
+    def retrieve(actor, scope, query, **kwargs):
+        rows = search_knowledge(actor, scope, query, **kwargs)
+        trace.append({"query": query, "queries": kwargs.get("queries", []), "keys": list(dict.fromkeys(refs[(r["type"], r["id"])] for r in rows)),
                       "sources": rows})
         return rows
     def transport(messages, **kwargs):

@@ -39,6 +39,22 @@ def excerpt(text, query, terms):
     return ("…" if start else "") + text[start:start + 600] + ("…" if start + 600 < len(text) else "")
 
 
+def ranked_candidates(queryset, query, fields, limit=501):
+    """Shared bounded lexical ranking, with no model calls."""
+    terms = query_terms(query)
+    if not terms:
+        return []
+    match = Q()
+    rank = Value(0, output_field=IntegerField())
+    for term in terms:
+        for field, weight in fields:
+            condition = Q(**{f"{field}__icontains": term})
+            match |= condition
+            rank = rank + Case(When(condition, then=Value(weight)), default=Value(0), output_field=IntegerField())
+    rank = rank + Case(When(**{f"{fields[0][0]}__icontains": query}, then=Value(30)), default=Value(0), output_field=IntegerField())
+    return list(queryset.filter(match).annotate(score=rank).order_by("-score", "pk")[:limit])
+
+
 def search_evidence(user, params):
     serializer = EvidenceQuery(data=params)
     serializer.is_valid(raise_exception=True)
@@ -53,22 +69,15 @@ def search_evidence(user, params):
         get_object_or_404(allowed, pk=scoped)
         allowed = allowed.filter(pk=scoped)
     sources = visible_evidence(user).filter(version__material_id__in=allowed.values("pk"))
-    match = Q()
-    rank = Value(0, output_field=IntegerField())
-    for term in terms:
-        text_match = Q(text__icontains=term)
-        title_match = Q(version__material__title__icontains=term)
-        match |= text_match | title_match
-        rank = rank + Case(When(text_match, then=Value(10)), default=Value(0), output_field=IntegerField())
-        rank = rank + Case(When(title_match, then=Value(4)), default=Value(0), output_field=IntegerField())
-    rank = rank + Case(When(text__icontains=query, then=Value(30)), default=Value(0), output_field=IntegerField())
-    candidates = list(sources.filter(match).annotate(score=rank).order_by("-score", "pk")[:501])
-    counts, results = Counter(), []
+    candidates = ranked_candidates(sources, query, [("text", 10), ("version__material__title", 4)])
+    counts, results, seen = Counter(), [], set()
     for row in candidates[:500]:
         version, material = row.version, row.version.material
-        if counts[material.pk] >= (limit if scoped else 2):
+        identity = (version.sha256, row.ordinal)
+        if identity in seen or counts[version.sha256] >= (limit if scoped else 2):
             continue
-        counts[material.pk] += 1
+        seen.add(identity)
+        counts[version.sha256] += 1
         url = f"/api/materials/{material.pk}/versions/{version.pk}/file/"
         results.append({
             "source_kind": material.source_kind, "material_id": material.pk, "title": material.title, "version_id": version.pk,
