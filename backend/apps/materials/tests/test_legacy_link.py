@@ -156,3 +156,31 @@ class LegacyLinkTests(TestCase):
         self.assertEqual(self.client.get(f"/api/papers/{paper.pk}/pdf/").status_code, 200)
         data = self.client.get(f"/api/materials/{version.material_id}/").json()
         self.assertEqual(data["versions"][0]["retrieval_status"], "searchable_review")
+
+    def test_dry_run_detects_duplicates_in_new_batch_and_can_resume(self):
+        first = self.paper()
+        second = self.paper("objects/pdf/copy.pdf")
+        rows = self.run_link()
+        self.assertEqual([row["status"] for row in rows], ["available", "duplicate"])
+        self.assertEqual(rows[1]["duplicate_of_paper_id"], first.pk)
+        output = StringIO()
+        call_command("link_legacy_papers", owner=self.owner.username, after_id=first.pk, stdout=output)
+        self.assertEqual(json.loads(output.getvalue())["paper_id"], second.pk)
+        self.assertFalse(Material.objects.exists())
+
+    def test_database_accepts_legacy_insert_and_paper_delete_after_rollback(self):
+        from django.db import connection
+        from apps.materials.models import LegacyPaperLink
+        with connection.cursor() as cursor:
+            cursor.execute("INSERT INTO materials_material (title, owner_id, visibility, created_at) VALUES (%s, %s, %s, CURRENT_TIMESTAMP) RETURNING id", ['旧代码新增', self.owner.pk, 'team'])
+            material = Material.objects.get(pk=cursor.fetchone()[0])
+        self.assertEqual(material.source_kind, 'unclassified')
+        self.assertEqual(material.external_agent_access, 'blocked')
+        paper = self.paper()
+        self.run_link(True)
+        link = LegacyPaperLink.objects.get(paper=paper)
+        with connection.cursor() as cursor:
+            cursor.execute('DELETE FROM papers_paper WHERE id = %s', [paper.pk])
+        link.refresh_from_db()
+        self.assertIsNone(link.paper_id)
+        self.assertTrue((Path(self.temp.name) / link.version.storage_key).is_file())

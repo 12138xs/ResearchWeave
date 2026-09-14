@@ -23,6 +23,7 @@ class Command(BaseCommand):
         parser.add_argument('--apply', action='store_true')
         parser.add_argument('--paper-id', type=int, action='append')
         parser.add_argument('--limit', type=int, default=100)
+        parser.add_argument('--after-id', type=int, default=0, help='只处理此编号之后的论文，用于续批')
 
     def handle(self, *args, **options):
         owner = get_user_model().objects.filter(username=options['owner'], is_active=True, is_staff=True).first()
@@ -30,7 +31,8 @@ class Command(BaseCommand):
             raise CommandError('请指定有效的管理员作为团队全文登记人。')
         if not 1 <= options['limit'] <= 1000:
             raise CommandError('每批限制必须为 1–1000。')
-        papers = Paper.objects.order_by('pk')
+        papers = Paper.objects.filter(pk__gt=options['after_id']).order_by('pk')
+        seen = {}
         if options['paper_id']:
             papers = papers.filter(pk__in=options['paper_id'])
         for paper in papers[:options['limit']]:
@@ -38,6 +40,11 @@ class Command(BaseCommand):
                 result = self.process(paper, owner, options['apply'])
             except (OSError, ValueError, ValidationError):
                 result = {'status': 'invalid_file'}
+            digest = result.get('sha256')
+            if not options['apply'] and digest in seen and result['status'] == 'available':
+                result.update(status='duplicate', duplicate_of_paper_id=seen[digest])
+            if digest:
+                seen.setdefault(digest, paper.pk)
             self.stdout.write(json.dumps({'paper_id': paper.pk, **result}, ensure_ascii=False))
 
     def process(self, paper, owner, apply):
