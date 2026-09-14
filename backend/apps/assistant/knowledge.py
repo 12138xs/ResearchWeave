@@ -94,7 +94,7 @@ def material_source(row):
         location += "，提取内容待人工核对"
     return source_payload("material", row.pk, version.material.title, row.text, location,
         f"/materials/{version.material_id}?version={version.pk}#evidence-{row.pk}", version.material.source_kind,
-        material_id=version.material_id, version_id=version.pk, version_sha256=version.sha256,
+        material_id=version.material_id, version_id=version.pk, version_number=version.number, version_sha256=version.sha256,
         ordinal=row.ordinal, page=row.page, line_start=row.line_start, line_end=row.line_end)
 
 

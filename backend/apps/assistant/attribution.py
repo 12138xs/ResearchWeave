@@ -11,7 +11,9 @@ RULES = {
 
 
 def review_sources(sources):
-    return [{**source, 'attribution_rule': RULES.get(source.get('source_kind'),
+    visible_fields = {'label', 'type', 'title', 'source_kind', 'location', 'excerpt', 'version_number',
+                      'text_start', 'text_end', 'total_chars', 'truncated', 'read_mode'}
+    return [{**{key: value for key, value in source.items() if key in visible_fields}, 'attribution_rule': RULES.get(source.get('source_kind'),
              '按 source_kind 描述当前记录；不是已核对的论文原文，不得推定论文或实测来源。')}
             for source in sources.values()]
 

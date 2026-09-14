@@ -36,3 +36,10 @@ class AttributionTests(TestCase):
     def test_warning_about_secondary_source_is_not_a_fulltext_claim(self):
         validate_attribution('这是整理卡，不能当作论文原文 [S1]。', self.sources)
         validate_attribution('需进一步核对论文原文 [S3]。', self.sources)
+
+    def test_review_cannot_confuse_database_id_with_document_version(self):
+        self.sources['S2'].update(version_id=913, material_id=511, version_number=2, location='版本 2，第 3 页')
+        row = review_sources(self.sources)[1]
+        self.assertEqual(row['version_number'], 2)
+        self.assertNotIn('version_id', row)
+        self.assertNotIn('material_id', row)
