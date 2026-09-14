@@ -106,7 +106,7 @@ def measure_case(case, refs, user, model_call=None):
     """测量现有工具循环，不注入检索词、金标或答案，不改变生产逻辑。"""
     from apps.ai.minimax import call_minimax_chat
     real_call = model_call or call_minimax_chat
-    from apps.assistant.reading import read_source
+    from apps.assistant.reading import read_source, find_in_source
     trace, readings, transmitted, transmitted_sources = [], [], [], []
     def retrieve(actor, scope, query, **kwargs):
         rows = search_knowledge(actor, scope, query, **kwargs)
@@ -116,6 +116,10 @@ def measure_case(case, refs, user, model_call=None):
     def read(actor, scope, source, **kwargs):
         result = read_source(actor, scope, source, **kwargs)
         readings.append({"source_ref": source.get("label"), "options": kwargs, "sources": result["sources"]})
+        return result
+    def locate(actor, scope, source, **kwargs):
+        result = find_in_source(actor, scope, source, **kwargs)
+        readings.append({'tool': 'find_in_source', 'source_ref': source.get('label'), 'options': kwargs, 'sources': result['sources']})
         return result
     def transport(messages, **kwargs):
         # 只保留实际工具证据；不落盘隐藏推理或完整请求。
@@ -130,6 +134,7 @@ def measure_case(case, refs, user, model_call=None):
     start = time.monotonic()
     with patch("apps.assistant.agent.search_knowledge", side_effect=retrieve), \
          patch("apps.assistant.agent.read_source", side_effect=read), \
+         patch("apps.assistant.agent.find_in_source", side_effect=locate), \
          patch("apps.assistant.agent.call_minimax_chat", side_effect=transport):
         run_exchange(exchange.pk, 1)
     exchange.refresh_from_db()
