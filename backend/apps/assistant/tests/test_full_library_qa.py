@@ -106,23 +106,30 @@ def measure_case(case, refs, user, model_call=None):
     """测量现有工具循环，不注入检索词、金标或答案，不改变生产逻辑。"""
     from apps.ai.minimax import call_minimax_chat
     real_call = model_call or call_minimax_chat
-    trace, transmitted = [], []
+    from apps.assistant.reading import read_source
+    trace, readings, transmitted, transmitted_sources = [], [], [], []
     def retrieve(actor, scope, query, **kwargs):
         rows = search_knowledge(actor, scope, query, **kwargs)
         trace.append({"query": query, "queries": kwargs.get("queries", []), "keys": list(dict.fromkeys(refs[(r["type"], r["id"])] for r in rows)),
                       "sources": rows})
         return rows
+    def read(actor, scope, source, **kwargs):
+        result = read_source(actor, scope, source, **kwargs)
+        readings.append({"source_ref": source.get("label"), "options": kwargs, "sources": result["sources"]})
+        return result
     def transport(messages, **kwargs):
         # 只保留实际工具证据；不落盘隐藏推理或完整请求。
         for message in messages:
             if message.get("role") == "tool":
                 transmitted.append(message.get("content", ""))
+                transmitted_sources.extend(json.loads(message["content"]).get("sources", []))
         return real_call(messages, **kwargs)
     session = AssistantSession.objects.create(created_by=user, title="全库基线", scope_json={})
     exchange = AssistantExchange.objects.create(session=session, question=case["question"],
                                                 status="queued", request_id=uuid.uuid4())
     start = time.monotonic()
     with patch("apps.assistant.agent.search_knowledge", side_effect=retrieve), \
+         patch("apps.assistant.agent.read_source", side_effect=read), \
          patch("apps.assistant.agent.call_minimax_chat", side_effect=transport):
         run_exchange(exchange.pk, 1)
     exchange.refresh_from_db()
@@ -131,7 +138,9 @@ def measure_case(case, refs, user, model_call=None):
     return {"id": case["id"], "question": case["question"], "scope": session.scope_json,
             "status": exchange.status, "seconds": round(time.monotonic() - start, 2),
             "answer": exchange.answer, "error": exchange.error, "usage": exchange.usage,
-            "retrieval": trace, "retrieved_keys": retrieved, "cited_keys": cited,
+            "retrieval": trace, "readings": readings, "transmitted_sources": transmitted_sources,
+            "required_transmitted_excerpt_coverage": excerpt_coverage(case.get("required_excerpt_groups", []), [{"sources": transmitted_sources}], refs),
+            "retrieved_keys": retrieved, "cited_keys": cited,
             "required_group_recall": group_recall(case["required_groups"], retrieved),
             "required_excerpt_coverage": excerpt_coverage(case.get("required_excerpt_groups", []), trace, refs),
             "cited_group_coverage": group_recall(case["required_groups"], cited),

@@ -1,3 +1,4 @@
+import hashlib
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
@@ -12,7 +13,7 @@ class EvidenceSearchTests(TestCase):
 
     def source(self, text="Fourier neural operator convergence", visibility="team", title="算子学习"):
         material = Material.objects.create(title=title, owner=self.owner, visibility=visibility)
-        version = MaterialVersion.objects.create(material=material, number=1, sha256="a" * 64,
+        version = MaterialVersion.objects.create(material=material, number=1, sha256=hashlib.sha256(text.encode()).hexdigest(),
             filename="paper.pdf", format="pdf", size=10, storage_key="unused.pdf", status="needs_review", created_by=self.owner)
         evidence = Evidence.objects.create(version=version, ordinal=1, page=3, text=text, review_required=True)
         return material, version, evidence

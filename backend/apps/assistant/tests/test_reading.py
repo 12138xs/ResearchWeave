@@ -1,6 +1,8 @@
-import hashlib
 import json
 import uuid
+import os
+from pathlib import Path
+from unittest import skipUnless
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -136,3 +138,34 @@ class ReadingTests(TestCase):
         self.assertEqual(exchange.status, 'failed')
         self.assertEqual(model.call_count, 2)
         self.assertEqual(exchange.answer, '')
+
+
+@skipUnless(os.getenv("RWV_M6C_LIVE") == "1", "需显式启用服务器冻结代表题")
+class FrozenReadingTests(TestCase):
+    def test_frozen_geometry_read_loop(self):
+        import hashlib
+        from apps.assistant.tests.test_full_library_qa import validate_dataset, seed_dataset, measure_case
+        self.assertTrue(os.environ.get("POSTGRES_DB", "").startswith("rwv_m6c_"))
+        raw = Path(os.environ["RWV_BASELINE_DATASET"]).read_bytes()
+        self.assertEqual(hashlib.sha256(raw).hexdigest(), os.environ["RWV_BASELINE_SHA256"])
+        data = validate_dataset(json.loads(raw))
+        user = get_user_model().objects.create_user(username="reading-live-self")
+        other = get_user_model().objects.create_user(username="reading-live-other")
+        refs = seed_dataset(data, user, other)
+        case = next(case for case in data["cases"] if case["id"] == "geometry")
+        self.assertEqual(case["split"], "baseline")
+        result = measure_case(case, refs, user)
+        result.update(commit=os.environ["RWV_BASELINE_COMMIT"], dataset_sha256=hashlib.sha256(raw).hexdigest(), holdout_executed=False)
+        with Path(os.environ["RWV_BASELINE_REPORT"]).open("x") as output:
+            json.dump(result, output, ensure_ascii=False)
+        print(json.dumps({key: result[key] for key in ['status', 'usage', 'seconds', 'required_group_recall', 'required_transmitted_excerpt_coverage']}, ensure_ascii=False), flush=True)
+        self.assertEqual(result["status"], "completed", result["usage"])
+        self.assertEqual(result["required_group_recall"], 1)
+        self.assertFalse(result["private_sentinel_exposed"])
+        searched = [row for trace in result["retrieval"] for row in trace["sources"]]
+        self.assertTrue(any(row.get('read_mode') and not any(
+            candidate['type'] == row['type'] and candidate['id'] == row['id'] and row['excerpt'] in candidate['excerpt']
+            for candidate in searched) for row in result['transmitted_sources']), '必须把初始检索之外的实际补读内容发给模型')
+        self.assertLessEqual(result["usage"]["evidence_chars"], 18000)
+        self.assertLessEqual(result["usage"]["tool_calls"], 6)
+        self.assertLessEqual(result["usage"]["model_calls"], 5)
