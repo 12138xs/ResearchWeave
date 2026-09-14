@@ -65,6 +65,18 @@ def group_recall(groups, retrieved):
     return sum(bool(set(group) & set(retrieved)) for group in groups) / len(groups)
 
 
+def excerpt_coverage(groups, trace, refs):
+    """金标短语仅用于计分；命中文章不等于实际看到必要的论据。"""
+    if not groups:
+        return None
+    def normalized(text):
+        return "".join(text.casefold().split())
+    seen = [(refs[(s["type"], s["id"])], normalized(s["excerpt"]))
+            for row in trace for s in row["sources"]]
+    return sum(any(key == item["key"] and normalized(item["contains"]) in text
+                   for item in group for key, text in seen) for group in groups) / len(groups)
+
+
 def seed_dataset(data, user, other):
     """仅供 Django 隔离 TestCase；不执行生产迁移或上传。"""
     refs = {}
@@ -121,6 +133,7 @@ def measure_case(case, refs, user, model_call=None):
             "answer": exchange.answer, "error": exchange.error, "usage": exchange.usage,
             "retrieval": trace, "retrieved_keys": retrieved, "cited_keys": cited,
             "required_group_recall": group_recall(case["required_groups"], retrieved),
+            "required_excerpt_coverage": excerpt_coverage(case.get("required_excerpt_groups", []), trace, refs),
             "cited_group_coverage": group_recall(case["required_groups"], cited),
             "private_sentinel_exposed": "PRIVATE_BASELINE_SENTINEL" in (exchange.answer + "".join(transmitted)),
             "quality_status": "pending_human_review"}
@@ -155,6 +168,12 @@ class FullLibraryBaselineTests(TestCase):
         self.assertEqual(group_recall([["a", "b"], ["c"]], ["a", "b"]), 0.5)
         self.assertIsNone(group_recall([], []))
 
+    def test_material_hit_does_not_imply_required_excerpt_seen(self):
+        refs = {("material", 1): "paper"}
+        trace = [{"sources": [{"type": "material", "id": 1, "excerpt": "abstract only"}]}]
+        groups = [[{"key": "paper", "contains": "method limitation"}]]
+        self.assertEqual(excerpt_coverage(groups, trace, refs), 0)
+
     def test_default_scope_searches_mixed_library_and_excludes_private(self):
         refs = seed_dataset(validate_dataset(self.data), self.user, self.other)
         rows = search_knowledge(self.user, {}, "mesh")
@@ -181,6 +200,7 @@ class FullLibraryBaselineTests(TestCase):
 @skipUnless(os.getenv("RWV_FULL_LIBRARY_BASELINE") == "1", "需显式启用服务器私有基线")
 class FullLibraryLiveBaselineTests(TestCase):
     def test_record_frozen_baseline(self):
+        self.assertTrue(os.environ.get("POSTGRES_DB", "").startswith("rwv_m6a_"), "必须使用专用基线数据库")
         raw = Path(os.environ["RWV_BASELINE_DATASET"]).read_bytes()
         data = validate_dataset(json.loads(raw))
         self.assertEqual(hashlib.sha256(raw).hexdigest(), os.environ["RWV_BASELINE_SHA256"])
