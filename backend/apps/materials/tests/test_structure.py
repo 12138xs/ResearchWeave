@@ -76,6 +76,13 @@ class StructureIndexTests(TestCase):
             new = build_structure(self.version.pk)
         self.assertNotEqual(old.pk, new.pk)
         self.assertTrue(source_allowed(row, self.user))
+        self.assertIn(f'structure_index={old.pk}', row['url'])
+        self.client.force_login(self.user)
+        response = self.client.get(f'/api/materials/{self.material.pk}/versions/{self.version.pk}/?structure_index={old.pk}')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['structure']['id'], old.pk)
+        self.client.force_login(self.other)
+        self.assertEqual(self.client.get(f'/api/materials/{self.material.pk}/versions/{self.version.pk}/?structure_index={old.pk}').status_code, 404)
         self.assertEqual(self.version.structure_indexes.filter(is_current=True).count(), 1)
 
     def test_tampering_with_original_evidence_invalidates_chunk(self):

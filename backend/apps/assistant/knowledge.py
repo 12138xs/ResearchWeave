@@ -126,7 +126,7 @@ def chunk_source(chunk):
     text = verified_chunk_text(chunk)
     location = f"版本 {version.number}，{chunk.title_path or '无标题正文'}，第 {chunk.line_start}–{chunk.line_end} 行"
     return source_payload("material", chunk.evidence_ids[0], version.material.title, text, location,
-        f"/materials/{version.material_id}?version={version.pk}#chunk-{chunk.pk}", version.material.source_kind,
+        f"/materials/{version.material_id}?version={version.pk}&structure_index={chunk.index_id}#chunk-{chunk.pk}", version.material.source_kind,
         content_type=version.material.content_type, material_id=version.material_id,
         version_id=version.pk, version_number=version.number, version_sha256=version.sha256,
         chunk_id=chunk.pk, structure_index_id=chunk.index_id, ordinal=chunk.ordinal,

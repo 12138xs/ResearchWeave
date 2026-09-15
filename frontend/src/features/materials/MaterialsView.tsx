@@ -92,7 +92,9 @@ export function MaterialsView() {
 }
 
 function VersionEvidence({ material, version, reload, refresh }: { material: Material; version: Version; reload: number; refresh: () => void }) {
-  const { data, loading, error } = useApiData<Detail | null>(`/api/materials/${material.id}/versions/${version.id}/?reload=${reload}`, null);
+  const [params] = useSearchParams();
+  const structureIndex = params.get('structure_index');
+  const { data, loading, error } = useApiData<Detail | null>(`/api/materials/${material.id}/versions/${version.id}/?reload=${reload}${structureIndex && /^\d+$/.test(structureIndex) ? `&structure_index=${structureIndex}` : ''}`, null);
   useEffect(() => {
     if (data && /^#(?:evidence|chunk)-\d+$/.test(window.location.hash)) {
       const target = document.getElementById(window.location.hash.slice(1));

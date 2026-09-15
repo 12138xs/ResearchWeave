@@ -90,7 +90,13 @@ class VersionDetail(APIView):
     def get(self, request, pk, version_id):
         version = get_version(request.user, pk, version_id)
         data = version_data(version)
-        index = version.structure_indexes.filter(is_current=True).first()
+        index_id = request.query_params.get("structure_index")
+        if index_id is not None:
+            if not index_id.isdigit():
+                raise ValidationError("结构索引编号无效。")
+            index = get_object_or_404(version.structure_indexes, pk=int(index_id))
+        else:
+            index = version.structure_indexes.filter(is_current=True).first()
         data["structure"] = {"id": index.pk, "parser_version": index.parser_version, "sections": index.sections,
             "chunks": list(index.chunks.values("id", "ordinal", "title_path", "line_start", "line_end", "text", "oversized", "evidence_ids"))} if index else None
         data["evidence"] = list(version.evidence.values("id", "ordinal", "page", "line_start", "line_end", "text", "review_required", "reviewed_at"))
