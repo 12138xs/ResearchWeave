@@ -196,7 +196,7 @@ class DocumentImportCandidate(models.Model):
 
 
 class DocumentStructureIndex(models.Model):
-    version = models.ForeignKey(DocumentVersion, related_name='doc_structure_indexes', on_delete=models.CASCADE)
+    version = models.ForeignKey(DocumentVersion, related_name='structure_indexes', on_delete=models.CASCADE)
     parser_version = models.CharField(max_length=80)
     source_sha256 = models.CharField(max_length=64)
     is_current = models.BooleanField(default=False)
