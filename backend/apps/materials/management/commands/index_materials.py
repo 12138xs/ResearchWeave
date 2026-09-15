@@ -8,12 +8,12 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('--apply', action='store_true')
-        parser.add_argument('--version', type=int, action='append')
+        parser.add_argument('--material-version', type=int, action='append')
 
     def handle(self, *args, **options):
         rows = MaterialVersion.objects.filter(format='md', status__in=['ready', 'needs_review']).order_by('pk')
-        if options['version']:
-            rows = rows.filter(pk__in=options['version'])
+        if options['material_version']:
+            rows = rows.filter(pk__in=options['material_version'])
         self.stdout.write(f"{'apply' if options['apply'] else 'dry-run'}: {rows.count()}")
         if options['apply']:
             for row in rows.iterator():

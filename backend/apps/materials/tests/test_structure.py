@@ -111,3 +111,11 @@ class StructureIndexTests(TestCase):
         rows = search_knowledge(self.user, {}, 'PINN inverse coefficient identification')
         self.assertEqual(rows[0]['id'], e.pk)
         self.assertNotIn('chunk_id', rows[0])
+
+    def test_command_dry_run_and_explicit_version_build(self):
+        from django.core.management import call_command
+        from io import StringIO
+        call_command('index_materials', stdout=StringIO())
+        self.assertFalse(self.version.structure_indexes.exists())
+        call_command('index_materials', '--apply', '--material-version', str(self.version.pk), stdout=StringIO())
+        self.assertEqual(self.version.structure_indexes.count(), 1)
