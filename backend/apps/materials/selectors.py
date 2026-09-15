@@ -29,6 +29,8 @@ def version_data(version):
 
 def material_data(material, user):
     return {
+        "content_type": material.content_type, "content_type_label": material.get_content_type_display(),
+        "internal_ai_blocked": material.internal_ai_blocked or material.content_type == "proposal",
         "id": material.pk, "title": material.title, "visibility": material.visibility,
         "can_classify": material.owner_id == user.pk, "source_kind": material.source_kind, "source_kind_label": material.get_source_kind_display(),
         "legacy_paper_ids": list(material.versions.values_list("legacy_links__paper_id", flat=True).exclude(legacy_links__paper_id=None).distinct()),

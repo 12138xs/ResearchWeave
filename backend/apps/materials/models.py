@@ -10,7 +10,19 @@ class ExternalAgentAccess(models.TextChoices):
     APPROVED = "approved", "允许外部 Agent 读取"
 
 
+class ContentType(models.TextChoices):
+    PAPER = "paper", "论文"
+    DOCUMENT = "document", "知识文档"
+    PROPOSAL = "proposal", "项目申报书"
+    EXPERIMENT = "experiment", "实验日志"
+    OTHER = "other", "其他 / 待分类"
+
+
 class Material(models.Model):
+    content_type = models.CharField(max_length=16, choices=ContentType.choices, default=ContentType.OTHER, db_default="other", db_index=True)
+    # No self-service approval until the disclosure audit workflow is implemented.
+    internal_ai_blocked = models.BooleanField(default=False, db_default=False)
+
     title = models.CharField(max_length=500)
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
     visibility = models.CharField(max_length=20, choices=Visibility.choices, default=Visibility.TEAM)

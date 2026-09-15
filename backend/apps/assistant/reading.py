@@ -30,7 +30,7 @@ def find_in_source(user, scope, source, *, query, budget=MAX_READ_CHARS):
             window['truncated'] = True
         window['next_offset'] = window['text_end'] if window['text_end'] < window['total_chars'] else None
         window['read_mode'] = 'within_source_search'
-        if not source_allowed(window, user):
+        if not source_allowed(window, user, scope):
             raise ValueError('定位期间来源发生变化')
         output.append(window)
         remaining -= len(window['excerpt'])
@@ -67,7 +67,7 @@ def read_source(user, scope, source, *, budget=MAX_READ_CHARS, offset=0, context
         row = slice_source(original, start, allowance)
         row['next_offset'] = row['text_end'] if row['text_end'] < row['total_chars'] else None
         row['read_mode'] = 'context' if context else 'evidence'
-        if not source_allowed(row, user):
+        if not source_allowed(row, user, scope):
             raise ValueError("读取期间来源发生变化")
         output.append(row)
         remaining -= len(row['excerpt'])

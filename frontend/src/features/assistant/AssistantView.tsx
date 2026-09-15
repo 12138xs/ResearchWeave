@@ -9,6 +9,7 @@ import { PersonalWorkspace } from './PersonalWorkspace';
 import { workspaceRequest } from '../../api/workspace';
 
 const presets = ['根据知识库总结所问方向的研究进展，区分材料事实和待验证问题。', '判断所述研究思路是否可行，给出相关依据、主要风险和最小验证实验。', '分析所述工作的不足，比较已有方法，提出有依据的改进建议。'];
+const categories: Record<string, string> = { paper: '论文', document: '知识文档', experiment: '实验日志', other: '其他 / 待分类' };
 const active = (row: AssistantExchange) => ['queued', 'running'].includes(row.status);
 const sourceLabels: Record<string, string> = { unclassified: '未分类来源', paper_fulltext: '论文原文', paper_abstract: '论文摘要', human_record: '人工记录', derived_research_card: '衍生整理卡', agent_summary: 'Agent 摘要', experiment_plan: '实验计划', experiment_observation: '实验观察', experiment_interpretation: '实验解释', code_reference: '代码引用' };
 // crypto.randomUUID requires a secure context; this app also supports an internal HTTP entry.
@@ -24,6 +25,7 @@ export function AssistantView() {
   const [workspaceRevision, setWorkspaceRevision] = useState(0);
   const [reload, setReload] = useState(0);
   const [session, setSession] = useState<AssistantSession | null>(null);
+  const [contentTypes, setContentTypes] = useState<string[]>(Object.keys(categories));
   const [question, setQuestion] = useState('');
   const [preset, setPreset] = useState('');
   const [error, setError] = useState('');
@@ -59,7 +61,7 @@ export function AssistantView() {
   };
   const newTopic = () => {
     selection.current += 1; setSession(null); pending.current = null; setError(''); setConnection('');
-    setPreset('');
+    setPreset(''); setContentTypes(Object.keys(categories));
   };
   const choose = (id: number) => perform(async () => {
     const token = ++selection.current;
@@ -72,7 +74,8 @@ export function AssistantView() {
     if (!question.trim() || running) return;
     const text = preset === '' ? question.trim() : `${question.trim()}\n\n回答要求：${presets[Number(preset)]}`;
     if (text.length > 4000) throw new Error('问题与模板合计不能超过 4000 字，请缩短问题或取消模板。');
-    const scope = session?.scope_json ?? {};
+    if (!session && !contentTypes.length) throw new Error("请至少选择一个材料类别。");
+    const scope = session?.scope_json ?? { content_types: contentTypes };
     const scopeKey = JSON.stringify(scope);
     if (!pending.current || pending.current.session !== (session?.id ?? null) || pending.current.question !== text || pending.current.scopeKey !== scopeKey) {
       pending.current = { session: session?.id ?? null, question: text, id: requestId(), scopeKey };
@@ -91,10 +94,13 @@ export function AssistantView() {
     <p><a href="/materials">管理与添加材料</a> · <a href="/search">查询知识库</a></p>
     <PersonalWorkspace revision={workspaceRevision} />
     <details className="detail-card assistant-scope"><summary>高级范围 · 类别选择</summary>
-      <p id="category-help" className="muted">类别筛选待接入，以下选项暂不可用。新话题仍检索全部可访问资料；历史会话沿用原有范围。</p>
-      <fieldset disabled aria-describedby="category-help"><legend>材料类别（待接入）</legend>
-        <div className="assistant-categories">{['论文', '知识文档', '项目申报书', '实验日志'].map((label) => <label key={label}><input type="checkbox" />{label}<span>待接入</span></label>)}</div>
+      <p id="category-help" className="muted">只在所选类别中检索，追问沿用会话范围；修改范围请开启新话题。按类别提问时不使用个人 memory，保留表达风格。</p>
+      <fieldset disabled={busy || !!session} aria-describedby="category-help"><legend>材料类别</legend>
+        <div className="assistant-categories">{Object.entries(categories).map(([value, label]) => <label key={value}><input type="checkbox" checked={session ? !session.scope_json.content_types || (session.scope_json.content_types as string[]).includes(value) : contentTypes.includes(value)} onChange={(event) => setContentTypes((current) => event.target.checked ? [...current, value] : current.filter((item) => item !== value))} />{label}</label>)}
+          <label><input type="checkbox" disabled />项目申报书<span>外发审批待接入</span></label>
+        </div>
       </fieldset>
+      {!session && !contentTypes.length && <p role="alert">请至少选择一个材料类别。</p>}
     </details>
     <section className="assistant-session-controls" aria-label="会话管理">
       {session && <button type="button" disabled={busy} onClick={() => perform(async () => {
@@ -110,8 +116,8 @@ export function AssistantView() {
     </section>
     <section className="detail-card assistant-composer">
       <h2>与知识库对话</h2>
-      <p role="status">{session && Object.keys(session.scope_json).length ? '当前会话使用指定范围，追问沿用此范围。' : '当前可访问知识库：团队共享材料及本人启用的可用记录。'}</p>
-      {session && Object.entries(session.scope_json).map(([kind, ids]) => <p className="muted" key={kind}>{({ material_ids: '材料', paper_ids: '旧论文', document_ids: '文档', experiment_ids: '实验', note_ids: '个人记录' } as Record<string, string>)[kind] ?? kind}：{Array.isArray(ids) ? ids.join('、') : String(ids)}</p>)}
+      <p role="status">{session && Object.keys(session.scope_json).length ? '当前会话使用指定范围，追问沿用此范围。' : '当前检索范围：所选类别中的可访问材料；未分类材料归入“其他 / 待分类”。'}</p>
+      {session && Object.entries(session.scope_json).map(([kind, ids]) => <p className="muted" key={kind}>{({ material_ids: '材料', paper_ids: '旧论文', document_ids: '文档', experiment_ids: '实验', note_ids: '个人记录', content_types: '材料类别' } as Record<string, string>)[kind] ?? kind}：{Array.isArray(ids) ? ids.map((value) => kind === 'content_types' ? categories[String(value)] ?? value : value).join('、') : String(ids)}</p>)}
       <p className="muted">直接提问即可，系统会自动查找相关材料并按需要补读。问题与实际读取的片段会发送至 MiniMax M3。已关联全文的旧论文可检索正文，仅有摘要的条目仍按摘要使用；公式请核对原文。</p>
       <label>提示词模板（可选）
         <select aria-label="提示词模板" disabled={busy} value={preset} onChange={(event) => setPreset(event.target.value)}>
@@ -121,7 +127,7 @@ export function AssistantView() {
       </label>
       {preset !== '' && <p className="muted">{presets[Number(preset)]}</p>}
       <textarea disabled={busy} aria-label="科研问题" maxLength={4000} value={question} onChange={(event) => setQuestion(event.target.value)} placeholder={session ? '继续追问，系统会重新查找依据' : '例如：我们库中关于复杂几何上的神经算子有哪些相关工作，分别有什么限制？'} />
-      <button type="button" onClick={ask} disabled={busy || !question.trim() || !!running}>{busy ? '正在提交…' : session ? '继续提问' : '提问'}</button>
+      <button type="button" onClick={ask} disabled={busy || !question.trim() || !!running || (!session && !contentTypes.length)}>{busy ? '正在提交…' : session ? '继续提问' : '提问'}</button>
       {error && <p role="alert">{error}</p>}
       {connection && running && <p role="status">{connection}</p>}
     </section>

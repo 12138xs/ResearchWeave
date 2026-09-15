@@ -10,6 +10,7 @@ from rest_framework.views import APIView
 from apps.materials.services import enqueue, ingest, import_card, retry_version, review_evidence
 from apps.materials.selectors import materials, get_version, version_data, material_data
 from apps.materials.serializers import UploadSerializer, CardSerializer
+from apps.materials.models import ContentType
 from apps.storage.provider import get_storage_provider
 
 
@@ -19,7 +20,7 @@ def upload_response(request, material=None):
     values = serializer.validated_data
     version, created = ingest(values["file"], owner=request.user, title=values["title"],
                               visibility=material.visibility if material else values["visibility"], material=material,
-                              source_kind=values["source_kind"])
+                              source_kind=values["source_kind"], content_type=values["content_type"])
     if created:
         enqueue(version.pk)
     version.refresh_from_db()
@@ -59,14 +60,20 @@ class MaterialClassification(APIView):
         kind = request.data.get("source_kind")
         if kind not in SourceKind.values:
             raise ValidationError("请选择有效来源类型。")
+        category = request.data.get("content_type")
+        if category is not None and category not in ContentType.values:
+            raise ValidationError("请选择有效材料类别。")
         with transaction.atomic():
             material = get_object_or_404(materials(request.user).select_for_update(), pk=pk, owner=request.user)
             material.source_kind = kind
+            if category is not None:
+                material.content_type = category
+                material.internal_ai_blocked = material.internal_ai_blocked or category == "proposal"
             # Reclassification cannot implicitly authorize a different external disclosure.
             material.external_agent_access = "blocked"
             material.external_access_changed_by = None
             material.external_access_changed_at = None
-            material.save(update_fields=["source_kind", "external_agent_access", "external_access_changed_by", "external_access_changed_at"])
+            material.save(update_fields=["content_type", "internal_ai_blocked", "source_kind", "external_agent_access", "external_access_changed_by", "external_access_changed_at"])
         return Response(material_data(material, request.user))
 
 

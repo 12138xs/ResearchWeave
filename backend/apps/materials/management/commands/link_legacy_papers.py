@@ -80,7 +80,7 @@ class Command(BaseCommand):
                     material = previous.version.material
                 # A duplicate shared by different papers must not advance their current version together.
                 version, _ = ingest(File(BytesIO(data), name='original.pdf'), owner=owner, title=paper.title,
-                                    material=material, source_kind='paper_fulltext')
+                                    material=material, source_kind='paper_fulltext', content_type='paper')
                 if version.sha256 != digest or version.material.source_kind != 'paper_fulltext':
                     raise ValidationError('文件或来源在登记期间发生变化。')
                 LegacyPaperLink.objects.create(paper=paper, version=version, original_sha256=digest)

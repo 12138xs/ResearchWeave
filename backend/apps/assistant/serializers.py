@@ -8,6 +8,7 @@ from apps.papers.models import Paper
 from apps.documents.models import Document
 from apps.library.models import KnowledgeSpace
 from apps.materials.selectors import materials
+from apps.materials.models import ContentType
 from apps.assistant.knowledge import source_allowed
 
 
@@ -21,6 +22,12 @@ def validate_scope(scope, user):
         "experiment_ids": accessible_experiments(user), "space_ids": KnowledgeSpace.objects.filter(is_active=True),
     }
     for key, ids in scope.items():
+        if key == "content_types":
+            if not isinstance(ids, list) or not ids or len(ids) > len(ContentType.values) or any(not isinstance(value, str) or value not in ContentType.values for value in ids):
+                raise serializers.ValidationError("请至少选择一个有效材料类别。")
+            if "proposal" in ids:
+                raise serializers.ValidationError("申报书暂未开放模型外发。")
+            continue
         if key not in sources or not isinstance(ids, list) or len(ids) > 100:
             raise serializers.ValidationError("来源范围不合法。")
         if any(type(value) is not int or value <= 0 for value in ids):
@@ -33,7 +40,7 @@ def validate_scope(scope, user):
 class AssistantExchangeSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        if any(not source_allowed(source, instance.session.created_by) for source in instance.sources):
+        if any(not source_allowed(source, instance.session.created_by, instance.session.scope_json) for source in instance.sources):
             data.update(answer="部分引用已不可访问，历史回答已隐藏。", sources=[], context_warning="请重新检索当前可用材料。")
         return data
 

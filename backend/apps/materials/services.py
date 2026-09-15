@@ -13,7 +13,7 @@ from pypdf import PdfReader
 from rest_framework.exceptions import ValidationError
 
 from apps.common.permissions import Visibility, editable_by
-from apps.materials.models import Evidence, Material, MaterialVersion, ResearchCard
+from apps.materials.models import ContentType, Evidence, Material, MaterialVersion, ResearchCard
 from apps.agent_access.contracts import SourceKind
 from apps.materials.selectors import get_version
 from apps.storage.provider import get_storage_provider
@@ -25,7 +25,9 @@ MAX_TEXT = 4_000_000
 PARSER_VERSION = "pypdf6-markdown-lines-v1"
 
 
-def ingest(upload, *, owner, title="", visibility="team", material=None, source_kind="unclassified"):
+def ingest(upload, *, owner, title="", visibility="team", material=None, source_kind="unclassified", content_type="other"):
+    if content_type not in ContentType.values:
+        raise ValidationError("材料类别无效。")
     if source_kind not in SourceKind.values:
         raise ValidationError("来源类型无效。")
     suffix = Path(upload.name).suffix.lower()
@@ -56,9 +58,11 @@ def ingest(upload, *, owner, title="", visibility="team", material=None, source_
                     duplicates = duplicates.filter(material__owner=owner)
                 duplicate = duplicates.order_by("id").first()
             if duplicate:
+                if material is None and content_type != "other" and duplicate.material.content_type != content_type:
+                    raise ValidationError("相同文件已登记为其他类别，请由所有者核对原材料分类。")
                 return duplicate, False
             if material is None:
-                material = Material.objects.create(title=(title.strip() or Path(upload.name).stem)[:500], owner=owner, visibility=visibility, source_kind=source_kind)
+                material = Material.objects.create(title=(title.strip() or Path(upload.name).stem)[:500], owner=owner, visibility=visibility, source_kind=source_kind, content_type=content_type, internal_ai_blocked=content_type == "proposal")
             number = (material.versions.aggregate(n=Max("number"))["n"] or 0) + 1
             storage_key = f"objects/materials/{uuid4().hex}{'.pdf' if suffix == '.pdf' else '.md'}"
             target = get_storage_provider().resolve(storage_key)

@@ -81,7 +81,9 @@ def run_exchange(exchange_id, attempt):
     if exchange is None:
         return
     user, scope = exchange.session.created_by, exchange.session.scope_json
-    personal, digest = personal_context(user) if user else ("", "")
+    def context():
+        return personal_context(user, include_memory="content_types" not in scope) if "content_types" in scope else personal_context(user)
+    personal, digest = context() if user else ("", "")
     sources, usage, searched = {}, {"total_tokens": 0, "model_calls": 0, "tool_calls": 0, "search_calls": 0, "read_calls": 0, "evidence_chars": 0}, False
     stage = "authorization"
 
@@ -91,9 +93,9 @@ def run_exchange(exchange_id, attempt):
         if not user or not get_user_model().objects.filter(pk=user.pk, is_active=True).exists():
             raise ValueError("用户已不可用")
         validate_scope(scope, user)
-        if personal_context(user)[1] != digest:
+        if context()[1] != digest:
             raise ValueError("个人上下文已修改，请重试")
-        if any(not source_allowed(source, user) for source in sources.values()):
+        if any(not source_allowed(source, user, scope) for source in sources.values()):
             raise ValueError("来源权限已变化")
 
     def progress(message):
@@ -109,7 +111,7 @@ def run_exchange(exchange_id, attempt):
         # Revalidate history before every transmission, not just when reading the session.
         history_sources, review_history = [], []
         for row in reversed(history):
-            if row.model == "MiniMax-M3" and row.sources and all(source_allowed(source, user) for source in row.sources):
+            if row.model == "MiniMax-M3" and row.sources and all(source_allowed(source, user, scope) for source in row.sources):
                 history_sources.extend(row.sources)
                 pair = [{"role": "user", "content": row.question[:2000]},
                         {"role": "assistant", "content": row.answer[:3000]}]
@@ -118,7 +120,7 @@ def run_exchange(exchange_id, attempt):
         messages.append({"role": "user", "content": exchange.question})
         for turn in range(4):
             check()
-            if any(not source_allowed(source, user) for source in history_sources):
+            if any(not source_allowed(source, user, scope) for source in history_sources):
                 raise ValueError("历史来源权限已变化")
             progress("正在检索相关材料" if turn == 0 else "正在比较证据并组织回答")
             stage = "model_request"
@@ -222,7 +224,7 @@ def run_exchange(exchange_id, attempt):
                     raise ValueError("工具标记不能作为回答")
                 progress("正在核对回答与原文依据")
                 stage = "evidence_review"
-                if any(not source_allowed(source, user) for source in history_sources):
+                if any(not source_allowed(source, user, scope) for source in history_sources):
                     raise ValueError("历史来源权限已变化")
                 usage["model_calls"] += 1
                 reviewed = call_minimax_chat([

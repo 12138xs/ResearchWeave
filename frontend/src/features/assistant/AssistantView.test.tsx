@@ -38,7 +38,7 @@ it('starts from a question without selecting a session or materials, and reuses 
   expect(host.textContent).toContain('响应丢失');
   await act(async () => button('提问').click());
   expect(start).toHaveBeenCalledTimes(2);
-  expect(start.mock.calls[0][2]).toEqual({});
+  expect(start.mock.calls[0][2]).toEqual({ content_types: ['paper', 'document', 'experiment', 'other'] });
   expect(start.mock.calls[0][1]).toBe(start.mock.calls[1][1]);
   expect(button('继续提问')).toBeDefined();
 });
@@ -78,14 +78,16 @@ it('clearing a preset submits only the question', async () => {
   expect(start.mock.calls[0][0]).toBe('我的研究问题');
 });
 
-it('shows honest category placeholders and sends no artificial scope', async () => {
+it('requires a category and sends only the selected categories', async () => {
   const start = vi.mocked(startAssistantConversation).mockResolvedValue(session);
   expect(host.querySelector('[aria-label="来源编号"]')).toBeNull();
-  const categories = host.querySelector('fieldset')!;
-  expect(categories.disabled).toBe(true);
-  expect(categories.querySelectorAll('input[type="checkbox"]')).toHaveLength(4);
-  expect(host.textContent).toContain('类别筛选待接入');
+  const fields = Array.from(host.querySelectorAll<HTMLInputElement>('fieldset input[type="checkbox"]'));
+  expect(fields).toHaveLength(5);
+  expect(fields[4].disabled).toBe(true);
   await writeQuestion('有哪些相关论文？');
+  await act(async () => fields.slice(0, 4).forEach((field) => field.click()));
+  expect(button('提问').disabled).toBe(true);
+  await act(async () => fields[0].click());
   await act(async () => button('提问').click());
-  expect(start.mock.calls[0][2]).toEqual({});
+  expect(start.mock.calls[0][2]).toEqual({ content_types: ['paper'] });
 });

@@ -20,7 +20,7 @@ def _source_visible(source, user):
     if not user or not user.is_authenticated:
         return False
     if kind == "material":
-        return Evidence.objects.filter(pk=pk, version__material_id__in=materials(user).values("pk")).exists()
+        return Evidence.objects.filter(pk=pk, version__material_id__in=ai_materials(user).values("pk")).exists()
     if kind == "document":
         return DocumentVersion.objects.filter(pk=pk).exists()
     if kind == "paper":
@@ -31,11 +31,27 @@ def _source_visible(source, user):
         return PersonalEntry.objects.filter(pk=pk, owner=user, kind="note", enabled=True).exists()
     if kind == "publication":
         row = ResearchPublication.objects.filter(pk=pk).first()
-        return bool(row and publication_allowed(row))
+        return bool(row and publication_allowed(row) and not Evidence.objects.filter(pk__in=row.evidence_ids).exclude(version__material_id__in=ai_materials(user).values("pk")).exists())
     return False
 
 
+def ai_materials(user):
+    return materials(user).filter(internal_ai_blocked=False).exclude(content_type="proposal")
+
+
+def id_scope(scope):
+    return {key: value for key, value in (scope or {}).items() if key != "content_types"}
+
+
+def category_allowed(scope, category):
+    return "content_types" not in (scope or {}) or category in scope["content_types"]
+
+
 def _scoped(queryset, scope, key, id_field="pk", space_field="space_id"):
+    category = {"paper_ids": "paper", "document_ids": "document", "experiment_ids": "experiment"}.get(key)
+    if category and not category_allowed(scope, category):
+        return queryset.none()
+    scope = id_scope(scope)
     if scope and key not in scope and "space_ids" not in scope:
         return queryset.none()
     if key in scope:
@@ -50,7 +66,10 @@ def _matches(queryset, terms, fields):
 
 
 def material_scope(user, scope):
-    allowed = materials(user)
+    allowed = ai_materials(user)
+    if "content_types" in scope:
+        allowed = allowed.filter(content_type__in=scope["content_types"])
+    scope = id_scope(scope)
     if not scope:
         return allowed
     match = Q(pk__in=[])
@@ -59,7 +78,10 @@ def material_scope(user, scope):
     if "paper_ids" in scope or "space_ids" in scope:
         papers = _scoped(Paper.objects.all(), scope, "paper_ids")
         match |= Q(versions__legacy_links__paper_id__in=papers.values("pk"))
-    return allowed.filter(match).distinct()
+    allowed = allowed.filter(match)
+    if "material_ids" in scope:
+        allowed = allowed.filter(pk__in=scope["material_ids"])
+    return allowed.distinct()
 
 
 def source_payload(kind, pk, title, text, location, url="", source_kind="unclassified", **identity):
@@ -94,7 +116,7 @@ def material_source(row):
         location += "，提取内容待人工核对"
     return source_payload("material", row.pk, version.material.title, row.text, location,
         f"/materials/{version.material_id}?version={version.pk}#evidence-{row.pk}", version.material.source_kind,
-        material_id=version.material_id, version_id=version.pk, version_number=version.number, version_sha256=version.sha256,
+        content_type=version.material.content_type, material_id=version.material_id, version_id=version.pk, version_number=version.number, version_sha256=version.sha256,
         ordinal=row.ordinal, page=row.page, line_start=row.line_start, line_end=row.line_end)
 
 
@@ -124,18 +146,18 @@ def resolve_source(source, user, scope=None):
             raise ValueError("实验不在读取范围")
         current = source_payload(kind, pk, row.title, row.objective + "\n" + row.protocol_markdown, "实验目标与方案，引用时快照", source_kind="experiment_plan")
     elif kind == "personal_note":
-        if scope and pk not in scope.get("note_ids", []):
+        if not category_allowed(scope, "experiment") or (id_scope(scope) and pk not in scope.get("note_ids", [])):
             raise ValueError("记录不在读取范围")
         row = PersonalEntry.objects.get(pk=pk)
         current = source_payload(kind, pk, row.title, row.body, "本人的研究记录，非发表论文；引用时快照", source_kind="human_record")
     elif kind == "publication":
-        if scope:
+        if id_scope(scope) or not category_allowed(scope, "experiment"):
             raise ValueError("共享记录不在读取范围")
         row = ResearchPublication.objects.get(pk=pk)
         current = source_payload(kind, pk, row.title, row.body, "成员明确发布的研究记录，非论文结论", source_kind="human_record")
     else:
         raise ValueError("来源类型不可读取")
-    for field in ("sha256", "source_kind", "material_id", "version_id", "version_sha256", "ordinal"):
+    for field in ("sha256", "source_kind", "content_type", "material_id", "version_id", "version_sha256", "ordinal"):
         if field == "source_kind" and kind != "material" and source.get(field) == "unclassified":
             continue  # Legacy snapshots predate native record classification.
         if field in source and source[field] != current.get(field):
@@ -143,11 +165,11 @@ def resolve_source(source, user, scope=None):
     return current
 
 
-def source_allowed(source, user):
-    if "sha256" not in source:
+def source_allowed(source, user, scope=None):
+    if "sha256" not in source and scope is None:
         return _source_visible(source, user)
     try:
-        resolve_source(source, user)
+        resolve_source(source, user, scope)
         return True
     except (ValueError, ObjectDoesNotExist):
         return False
@@ -188,15 +210,15 @@ def _search_once(user, scope, query):
     for row in _matches(experiments, terms, ["title", "objective", "protocol_markdown"])[:4]:
         add("experiment", row.pk, row.title, row.objective + "\n" + row.protocol_markdown,
             "实验目标与方案，引用时快照", source_kind="experiment_plan", score=row.score)
-    if not scope or "note_ids" in scope:
+    if category_allowed(scope, "experiment") and (not id_scope(scope) or "note_ids" in scope):
         notes = PersonalEntry.objects.filter(owner=user, kind="note", enabled=True)
         if "note_ids" in scope:
             notes = notes.filter(pk__in=scope["note_ids"])
         for row in _matches(notes, terms, ["title", "body"])[:4]:
             add("personal_note", row.pk, row.title, row.body, "本人的研究记录，非发表论文；引用时快照", source_kind="human_record", score=row.score)
-    if not scope:
+    if not id_scope(scope) and category_allowed(scope, "experiment"):
         for row in _matches(ResearchPublication.objects.all(), terms, ["title", "body"])[:20]:
-            if publication_allowed(row):
+            if _source_visible({"type": "publication", "id": row.pk}, user):
                 add("publication", row.pk, row.title, row.body, "成员明确发布的研究记录，非论文结论", source_kind="human_record", score=row.score)
     rows.sort(key=lambda row: row["score"], reverse=True)
     return rows[:24]

@@ -1,8 +1,10 @@
 from rest_framework import serializers
 from apps.agent_access.contracts import SourceKind
+from apps.materials.models import ContentType
 
 
 class UploadSerializer(serializers.Serializer):
+    content_type = serializers.ChoiceField(choices=ContentType.choices, default=ContentType.OTHER)
     source_kind = serializers.ChoiceField(choices=SourceKind.choices, default=SourceKind.UNCLASSIFIED)
     file = serializers.FileField()
     title = serializers.CharField(max_length=500, required=False, default="", allow_blank=True)
