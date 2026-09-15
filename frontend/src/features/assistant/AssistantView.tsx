@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import './assistant.css';
 
 import { controlAssistantExchange, startAssistantConversation, fetchAssistantSession, sendAssistantMessage } from '../../api/assistant';
 import { Header } from '../../components/Header';
@@ -23,8 +24,6 @@ export function AssistantView() {
   const [workspaceRevision, setWorkspaceRevision] = useState(0);
   const [reload, setReload] = useState(0);
   const [session, setSession] = useState<AssistantSession | null>(null);
-  const [scopeText, setScopeText] = useState('');
-  const [scopeKind, setScopeKind] = useState('material_ids');
   const [question, setQuestion] = useState('');
   const [preset, setPreset] = useState('');
   const [error, setError] = useState('');
@@ -60,28 +59,20 @@ export function AssistantView() {
   };
   const newTopic = () => {
     selection.current += 1; setSession(null); pending.current = null; setError(''); setConnection('');
-    setScopeText(''); setScopeKind('material_ids');
     setPreset('');
-  };
-  const newScope = () => {
-    const ids = scopeText.trim() ? scopeText.split(/[,，]/).map((item) => Number(item.trim())) : [];
-    if (ids.some((id) => !Number.isInteger(id) || id <= 0) || ids.length > 100) throw new Error('高级范围请输入最多 100 个逗号分隔的正整数编号，或留空查找当前可访问知识库。');
-    return ids.length ? { [scopeKind]: [...new Set(ids)] } : {};
   };
   const choose = (id: number) => perform(async () => {
     const token = ++selection.current;
     const result = await fetchAssistantSession(id);
     if (token === selection.current) {
       setSession(result); pending.current = null; setConnection('');
-      const [kind, ids] = Object.entries(result.scope_json)[0] ?? ['material_ids', []];
-      setScopeKind(kind); setScopeText(Array.isArray(ids) ? ids.join(',') : '');
     }
   });
   const ask = () => perform(async () => {
     if (!question.trim() || running) return;
     const text = preset === '' ? question.trim() : `${question.trim()}\n\n回答要求：${presets[Number(preset)]}`;
     if (text.length > 4000) throw new Error('问题与模板合计不能超过 4000 字，请缩短问题或取消模板。');
-    const scope = session?.scope_json ?? newScope();
+    const scope = session?.scope_json ?? {};
     const scopeKey = JSON.stringify(scope);
     if (!pending.current || pending.current.session !== (session?.id ?? null) || pending.current.question !== text || pending.current.scopeKey !== scopeKey) {
       pending.current = { session: session?.id ?? null, question: text, id: requestId(), scopeKey };
@@ -94,19 +85,18 @@ export function AssistantView() {
     }
     pending.current = null; setQuestion(''); setPreset(''); setConnection('');
   });
-  return <main className="page">
+  return <main className="page assistant-page">
     <Header eyebrow="MiniMax M3 · 试用版" title="内置科研 Agent" description="直接按方向提问，自动查找材料、补读依据并讨论科研思路。" />
     <p className="muted" role="note">无需勾选论文，默认检索你可访问的知识库。回答仍可能误读来源或适用条件，请展开引用核对后使用。</p>
     <p><a href="/materials">管理与添加材料</a> · <a href="/search">查询知识库</a></p>
-    <details><summary>我的工作区与个人偏好</summary><PersonalWorkspace revision={workspaceRevision} /></details>
-    <section className="toolbar">
-      <details><summary>高级范围（可选，仅新话题生效）</summary>
-      <select disabled={busy || !!session} aria-label="来源类型" value={scopeKind} onChange={(event) => setScopeKind(event.target.value)}>
-        <option value="material_ids">材料编号</option><option value="paper_ids">旧论文编号</option><option value="document_ids">文档编号</option><option value="experiment_ids">实验编号</option><option value="note_ids">个人记录编号</option>
-      </select>
-      <input disabled={busy || !!session} aria-label="来源编号" value={scopeText} onChange={(event) => setScopeText(event.target.value)} placeholder="留空查找当前可访问知识库" />
-      <p className="muted">指定范围仅用于缩小检索；追问沿用会话范围，修改请开启新话题。</p>
-      </details>
+    <PersonalWorkspace revision={workspaceRevision} />
+    <details className="detail-card assistant-scope"><summary>高级范围 · 类别选择</summary>
+      <p id="category-help" className="muted">类别筛选待接入，以下选项暂不可用。新话题仍检索全部可访问资料；历史会话沿用原有范围。</p>
+      <fieldset disabled aria-describedby="category-help"><legend>材料类别（待接入）</legend>
+        <div className="assistant-categories">{['论文', '知识文档', '项目申报书', '实验日志'].map((label) => <label key={label}><input type="checkbox" />{label}<span>待接入</span></label>)}</div>
+      </fieldset>
+    </details>
+    <section className="assistant-session-controls" aria-label="会话管理">
       {session && <button type="button" disabled={busy} onClick={() => perform(async () => {
         if (!window.confirm('删除此会话和仍关联的 memory？已保存的实验记录会保留并解除关联。')) return;
         await workspaceRequest(`sessions/${session.id}/`, 'DELETE'); setSession(null); setReload((value) => value + 1); setWorkspaceRevision((value) => value + 1);
@@ -118,8 +108,9 @@ export function AssistantView() {
         {session && !sessions.some((item) => item.id === session.id) && <option value={session.id}>{session.title}</option>}
       </select>
     </section>
-    <section className="detail-card">
-      <p role="status">{session && Object.keys(session.scope_json).length ? '当前会话使用指定范围，追问沿用此范围。' : !session && scopeText.trim() ? '首问将使用高级范围。' : '当前可访问知识库：团队共享材料及本人启用的可用记录。'}</p>
+    <section className="detail-card assistant-composer">
+      <h2>与知识库对话</h2>
+      <p role="status">{session && Object.keys(session.scope_json).length ? '当前会话使用指定范围，追问沿用此范围。' : '当前可访问知识库：团队共享材料及本人启用的可用记录。'}</p>
       {session && Object.entries(session.scope_json).map(([kind, ids]) => <p className="muted" key={kind}>{({ material_ids: '材料', paper_ids: '旧论文', document_ids: '文档', experiment_ids: '实验', note_ids: '个人记录' } as Record<string, string>)[kind] ?? kind}：{Array.isArray(ids) ? ids.join('、') : String(ids)}</p>)}
       <p className="muted">直接提问即可，系统会自动查找相关材料并按需要补读。问题与实际读取的片段会发送至 MiniMax M3。已关联全文的旧论文可检索正文，仅有摘要的条目仍按摘要使用；公式请核对原文。</p>
       <label>提示词模板（可选）

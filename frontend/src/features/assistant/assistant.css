@@ -1,0 +1,25 @@
+.assistant-page { min-width: 0; }
+.assistant-page > .detail-card { margin-block: 16px; }
+.assistant-page summary { cursor: pointer; font-weight: 600; padding-block: 8px; }
+.assistant-page input:not([type="checkbox"]), .assistant-page textarea, .assistant-page select { box-sizing: border-box; max-width: 100%; }
+.assistant-page textarea { width: 100%; min-height: 120px; resize: vertical; line-height: 1.7; }
+.assistant-page .assistant-composer > label { display: grid; gap: 8px; max-width: 320px; margin-block: 16px; }
+.assistant-page .assistant-composer > textarea { min-height: 160px; margin-bottom: 12px; }
+.assistant-session-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-block: 20px; }
+.assistant-session-controls select { flex: 1 1 260px; min-width: 0; }
+.assistant-page .assistant-session-controls button { width: auto; flex: 0 0 auto; }
+.assistant-scope fieldset { border: 0; padding: 0; margin: 16px 0 0; min-width: 0; }
+.assistant-scope legend { font-size: 14px; margin-bottom: 10px; }
+.assistant-categories { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.assistant-categories label { display: flex; align-items: center; gap: 10px; padding: 14px; border: 1px solid #dce2e9; border-radius: 10px; }
+.assistant-categories span { margin-left: auto; font-size: 12px; color: #667085; white-space: nowrap; }
+.assistant-workspace > input, .assistant-workspace > textarea, .assistant-workspace > select { display: block; width: 100%; margin-block: 12px; }
+.assistant-workspace > label { display: flex; align-items: center; gap: 8px; margin-block: 12px; }
+.assistant-workspace .toolbar { display: flex; flex-wrap: wrap; gap: 10px; }
+.assistant-workspace .source-preview { margin-block: 16px; overflow-wrap: anywhere; }
+.assistant-workspace .source-preview button { margin: 8px 8px 0 0; }
+.assistant-page article { overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+  .assistant-categories { grid-template-columns: 1fr; }
+  .assistant-session-controls select { flex-basis: 100%; }
+}

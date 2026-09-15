@@ -77,3 +77,15 @@ it('clearing a preset submits only the question', async () => {
   await act(async () => button('提问').click());
   expect(start.mock.calls[0][0]).toBe('我的研究问题');
 });
+
+it('shows honest category placeholders and sends no artificial scope', async () => {
+  const start = vi.mocked(startAssistantConversation).mockResolvedValue(session);
+  expect(host.querySelector('[aria-label="来源编号"]')).toBeNull();
+  const categories = host.querySelector('fieldset')!;
+  expect(categories.disabled).toBe(true);
+  expect(categories.querySelectorAll('input[type="checkbox"]')).toHaveLength(4);
+  expect(host.textContent).toContain('类别筛选待接入');
+  await writeQuestion('有哪些相关论文？');
+  await act(async () => button('提问').click());
+  expect(start.mock.calls[0][2]).toEqual({});
+});
