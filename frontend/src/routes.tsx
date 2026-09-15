@@ -22,13 +22,13 @@ export const navGroups: NavGroup[] = [
     routes: [
       { path: '/materials', label: '研究材料', description: '原文与证据' },
       { path: '/papers', label: '论文库', description: '阅读与复现' },
-      { path: '/docs', label: '知识文档', description: '团队沉淀' }
+      { path: '/docs', label: '知识文档', description: '团队沉淀' },
+      { path: '/experiments', label: '实验日志', description: '实验记录' }
     ]
   },
   {
     label: '研究流程',
     routes: [
-      { path: '/experiments', label: '实验与复现', description: '实验记录' },
       { path: '/agent', label: '内置科研 Agent', description: 'MiniMax · 试用' }
     ]
   },

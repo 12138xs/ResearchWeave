@@ -11,6 +11,15 @@ let host: HTMLDivElement;
 let root: Root;
 const session = { id: 42, title: '研究', mode: 'freeform_scoped' as const, scope_json: {}, created_by: 1, created_at: '', updated_at: '', exchanges: [] };
 const button = (text: string) => Array.from(host.querySelectorAll('button')).find((item) => item.textContent === text)!;
+const writeQuestion = async (text: string) => act(async () => {
+  const field = host.querySelector('textarea')!;
+  Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(field, text);
+  field.dispatchEvent(new Event('input', { bubbles: true }));
+});
+const choosePreset = async (value: string) => act(async () => {
+  const field = host.querySelector<HTMLSelectElement>('select[aria-label="提示词模板"]')!;
+  field.value = value; field.dispatchEvent(new Event('change', { bubbles: true }));
+});
 beforeEach(async () => {
   vi.clearAllMocks();
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
@@ -22,7 +31,7 @@ afterEach(async () => { await act(async () => root.unmount()); host.remove(); })
 it('starts from a question without selecting a session or materials, and reuses a lost-response request', async () => {
   const start = vi.mocked(startAssistantConversation);
   start.mockRejectedValueOnce(new Error('响应丢失')).mockResolvedValueOnce(session);
-  await act(async () => button('研究进展').click());
+  await writeQuestion('复杂几何有哪些相关工作？');
   expect(button('提问').disabled).toBe(false);
   expect(host.querySelector('details')?.open).toBe(false);
   await act(async () => button('提问').click());
@@ -36,13 +45,35 @@ it('starts from a question without selecting a session or materials, and reuses 
 
 it('blocks rapid double submission and follows up in the existing session', async () => {
   vi.mocked(startAssistantConversation).mockResolvedValue(session);
-  await act(async () => button('研究进展').click());
+  await writeQuestion('复杂几何有哪些相关工作？');
   await act(async () => { const ask = button('提问'); ask.click(); ask.click(); });
   expect(startAssistantConversation).toHaveBeenCalledTimes(1);
   vi.mocked(sendAssistantMessage).mockResolvedValue({ id: 1, session: 42, question: '追问', answer: '', sources: [], status: 'completed', attempt: 1, progress: '', error: '', updated_at: '', model: '', usage: {}, context_warning: '', created_at: '' });
-  await act(async () => button('工作改进').click());
+  await writeQuestion('如何改进？');
   await act(async () => button('继续提问').click());
   expect(sendAssistantMessage).toHaveBeenCalledTimes(1);
   expect(vi.mocked(sendAssistantMessage).mock.calls[0][0]).toBe(42);
   expect(startAssistantConversation).toHaveBeenCalledTimes(1);
+});
+
+it('selects at most one optional preset without replacing the question', async () => {
+  const start = vi.mocked(startAssistantConversation).mockResolvedValue(session);
+  const field = host.querySelector<HTMLSelectElement>('select[aria-label="提示词模板"]')!;
+  expect(field.value).toBe('');
+  expect(field.multiple).toBe(false);
+  await writeQuestion('我的研究问题');
+  await choosePreset('0'); await choosePreset('2');
+  expect(host.querySelector('textarea')!.value).toBe('我的研究问题');
+  await act(async () => button('提问').click());
+  expect(start.mock.calls[0][0]).toContain('分析所述工作的不足');
+  expect(start.mock.calls[0][0]).not.toContain('总结所问方向');
+  expect(field.value).toBe('');
+});
+
+it('clearing a preset submits only the question', async () => {
+  const start = vi.mocked(startAssistantConversation).mockResolvedValue(session);
+  await writeQuestion('我的研究问题');
+  await choosePreset('1'); await choosePreset('');
+  await act(async () => button('提问').click());
+  expect(start.mock.calls[0][0]).toBe('我的研究问题');
 });

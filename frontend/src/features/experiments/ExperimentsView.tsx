@@ -42,11 +42,11 @@ export function ExperimentsView() {
   };
   return (
     <main className="page experiments-page">
-      <Header eyebrow="" title="实验与复现" description="记录复现项目、运行过程和结果线索。" />
+      <Header eyebrow="" title="实验日志" description="记录实验项目、运行过程和结果线索。" />
       <section className="experiments-workbench">
         <div className="experiment-toolbar">
           <div>
-            <strong>复现项目</strong>
+            <strong>实验项目</strong>
             <span>按论文、目标和运行记录追踪实验进展。</span>
           </div>
           <div className="inline-actions">

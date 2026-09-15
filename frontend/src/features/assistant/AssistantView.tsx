@@ -7,7 +7,7 @@ import type { AssistantExchange, AssistantSession } from './types';
 import { PersonalWorkspace } from './PersonalWorkspace';
 import { workspaceRequest } from '../../api/workspace';
 
-const presets = ['根据知识库总结【方向】的研究进展，区分材料事实和待验证问题。', '判断【研究思路】是否可行，给出相关依据、主要风险和最小验证实验。', '分析【工作】的不足，比较已有方法，提出有依据的改进建议。'];
+const presets = ['根据知识库总结所问方向的研究进展，区分材料事实和待验证问题。', '判断所述研究思路是否可行，给出相关依据、主要风险和最小验证实验。', '分析所述工作的不足，比较已有方法，提出有依据的改进建议。'];
 const active = (row: AssistantExchange) => ['queued', 'running'].includes(row.status);
 const sourceLabels: Record<string, string> = { unclassified: '未分类来源', paper_fulltext: '论文原文', paper_abstract: '论文摘要', human_record: '人工记录', derived_research_card: '衍生整理卡', agent_summary: 'Agent 摘要', experiment_plan: '实验计划', experiment_observation: '实验观察', experiment_interpretation: '实验解释', code_reference: '代码引用' };
 // crypto.randomUUID requires a secure context; this app also supports an internal HTTP entry.
@@ -26,6 +26,7 @@ export function AssistantView() {
   const [scopeText, setScopeText] = useState('');
   const [scopeKind, setScopeKind] = useState('material_ids');
   const [question, setQuestion] = useState('');
+  const [preset, setPreset] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [connection, setConnection] = useState('');
@@ -60,6 +61,7 @@ export function AssistantView() {
   const newTopic = () => {
     selection.current += 1; setSession(null); pending.current = null; setError(''); setConnection('');
     setScopeText(''); setScopeKind('material_ids');
+    setPreset('');
   };
   const newScope = () => {
     const ids = scopeText.trim() ? scopeText.split(/[,，]/).map((item) => Number(item.trim())) : [];
@@ -77,7 +79,8 @@ export function AssistantView() {
   });
   const ask = () => perform(async () => {
     if (!question.trim() || running) return;
-    const text = question.trim();
+    const text = preset === '' ? question.trim() : `${question.trim()}\n\n回答要求：${presets[Number(preset)]}`;
+    if (text.length > 4000) throw new Error('问题与模板合计不能超过 4000 字，请缩短问题或取消模板。');
     const scope = session?.scope_json ?? newScope();
     const scopeKey = JSON.stringify(scope);
     if (!pending.current || pending.current.session !== (session?.id ?? null) || pending.current.question !== text || pending.current.scopeKey !== scopeKey) {
@@ -89,7 +92,7 @@ export function AssistantView() {
       const result = await startAssistantConversation(text, pending.current.id, scope);
       selection.current += 1; setSession(result); setReload((value) => value + 1);
     }
-    pending.current = null; setQuestion(''); setConnection('');
+    pending.current = null; setQuestion(''); setPreset(''); setConnection('');
   });
   return <main className="page">
     <Header eyebrow="MiniMax M3 · 试用版" title="内置科研 Agent" description="直接按方向提问，自动查找材料、补读依据并讨论科研思路。" />
@@ -119,7 +122,13 @@ export function AssistantView() {
       <p role="status">{session && Object.keys(session.scope_json).length ? '当前会话使用指定范围，追问沿用此范围。' : !session && scopeText.trim() ? '首问将使用高级范围。' : '当前可访问知识库：团队共享材料及本人启用的可用记录。'}</p>
       {session && Object.entries(session.scope_json).map(([kind, ids]) => <p className="muted" key={kind}>{({ material_ids: '材料', paper_ids: '旧论文', document_ids: '文档', experiment_ids: '实验', note_ids: '个人记录' } as Record<string, string>)[kind] ?? kind}：{Array.isArray(ids) ? ids.join('、') : String(ids)}</p>)}
       <p className="muted">直接提问即可，系统会自动查找相关材料并按需要补读。问题与实际读取的片段会发送至 MiniMax M3。已关联全文的旧论文可检索正文，仅有摘要的条目仍按摘要使用；公式请核对原文。</p>
-      <div className="toolbar">{['研究进展', '思路可行性', '工作改进'].map((label, index) => <button type="button" key={label} disabled={busy} onClick={() => setQuestion(presets[index])}>{label}</button>)}</div>
+      <label>提示词模板（可选）
+        <select aria-label="提示词模板" disabled={busy} value={preset} onChange={(event) => setPreset(event.target.value)}>
+          <option value="">不使用模板</option>
+          {['研究进展', '思路可行性', '工作改进'].map((label, index) => <option key={label} value={index}>{label}</option>)}
+        </select>
+      </label>
+      {preset !== '' && <p className="muted">{presets[Number(preset)]}</p>}
       <textarea disabled={busy} aria-label="科研问题" maxLength={4000} value={question} onChange={(event) => setQuestion(event.target.value)} placeholder={session ? '继续追问，系统会重新查找依据' : '例如：我们库中关于复杂几何上的神经算子有哪些相关工作，分别有什么限制？'} />
       <button type="button" onClick={ask} disabled={busy || !question.trim() || !!running}>{busy ? '正在提交…' : session ? '继续提问' : '提问'}</button>
       {error && <p role="alert">{error}</p>}
