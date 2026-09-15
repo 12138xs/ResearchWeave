@@ -18,6 +18,12 @@ class MarkdownStructureTests(SimpleTestCase):
         self.assertTrue(any('$$\n# not math heading\n\nx=1\n$$' in c['text'] for c in chunks))
         self.assertTrue(any('|a|b|\n|-|-|\n|1|2|' in c['text'] for c in chunks))
 
+    def test_frontmatter_is_not_a_section_heading(self):
+        text = '---\ntitle: Metadata\nauthor: Example\n---\n\n# Real section\nbody'
+        sections, chunks = split_markdown(text)
+        self.assertEqual([s['title'] for s in sections], ['Real section'])
+        self.assertEqual(''.join(c['text'] for c in chunks), text)
+
     def test_unclosed_math_and_no_headings_do_not_drop_content(self):
         for text in ['', '\n\n', 'paragraph', '$$\n# not a heading\n\nmore', r'\[' + '\n# math\n\nx\n' + r'\]']:
             sections, chunks = split_markdown(text)

@@ -18,6 +18,10 @@ def split_markdown(text):
     lines = text.splitlines(keepends=True)
     tokens = MarkdownIt('commonmark').enable('table').parse(text)
     protected = [(t.map[0], t.map[1]) for t in tokens if t.map and t.type in {'fence', 'code_block'}]
+    if lines and lines[0].strip() == '---':
+        end = next((i for i in range(1, len(lines)) if lines[i].strip() in {'---', '...'}), None)
+        if end is not None:
+            protected.append((0, end + 1))
     closing, start = None, 0
     for i, line in enumerate(lines):
         if any(a <= i < b for a, b in protected):
