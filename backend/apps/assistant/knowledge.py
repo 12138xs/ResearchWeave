@@ -210,23 +210,18 @@ def _search_once(user, scope, query):
 
     evidence = visible_evidence(user).filter(version__material_id__in=material_scope(user, scope).values("pk"))
     chunks = StructureChunk.objects.filter(index__is_current=True, index__version_id__in=evidence.values('version_id')).select_related('index__version__material')
-    counts, seen = Counter(), set()
-    for chunk in ranked_candidates(chunks, query, [('text', 10), ('title_path', 8), ('index__version__material__title', 4)]):
-        group = chunk.index.version.sha256
-        if counts[group] >= 2:
-            continue
-        rows.append(search_window({**chunk_source(chunk), 'score': chunk.score}, query, terms))
-        counts[group] += 1
-        if len(rows) >= 8:
-            break
     evidence = evidence.exclude(version_id__in=chunks.values('index__version_id'))
-    for row in ranked_candidates(evidence, query, [("text", 10), ("version__material__title", 4)]):
-        identity = (row.version.sha256, row.ordinal)
-        if identity in seen or counts[row.version.sha256] >= 2:
+    candidates = [(row.score, True, row) for row in ranked_candidates(chunks, query, [('text', 10), ('title_path', 8), ('index__version__material__title', 4)])]
+    candidates += [(row.score, False, row) for row in ranked_candidates(evidence, query, [('text', 10), ('version__material__title', 4)])]
+    counts, seen = Counter(), set()
+    for score, structured, row in sorted(candidates, key=lambda item: (-item[0], item[2].pk)):
+        version = row.index.version if structured else row.version
+        identity = (version.sha256, structured, row.ordinal)
+        if identity in seen or counts[version.sha256] >= 2:
             continue
-        seen.add(identity)
-        counts[row.version.sha256] += 1
-        rows.append(search_window({**material_source(row), "score": row.score}, query, terms))
+        seen.add(identity); counts[version.sha256] += 1
+        source = chunk_source(row) if structured else material_source(row)
+        rows.append(search_window({**source, 'score': score}, query, terms))
         if len(rows) >= 8:
             break
     documents = _scoped(DocumentVersion.objects.filter(is_current=True).select_related("document"), scope,

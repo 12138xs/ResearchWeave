@@ -94,8 +94,10 @@ export function MaterialsView() {
 function VersionEvidence({ material, version, reload, refresh }: { material: Material; version: Version; reload: number; refresh: () => void }) {
   const { data, loading, error } = useApiData<Detail | null>(`/api/materials/${material.id}/versions/${version.id}/?reload=${reload}`, null);
   useEffect(() => {
-    if (data && window.location.hash.startsWith('#evidence-')) {
-      document.getElementById(window.location.hash.slice(1))?.scrollIntoView();
+    if (data && /^#(?:evidence|chunk)-\d+$/.test(window.location.hash)) {
+      const target = document.getElementById(window.location.hash.slice(1));
+      if (target instanceof HTMLDetailsElement) target.open = true;
+      target?.scrollIntoView();
     }
   }, [data]);
   const [message, setMessage] = useState('');

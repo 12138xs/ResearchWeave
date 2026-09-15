@@ -83,3 +83,18 @@ class StructureIndexTests(TestCase):
         row = search_knowledge(self.user, {}, 'numerical stability')[0]
         Evidence.objects.filter(pk=row['id']).update(text='changed')
         self.assertFalse(source_allowed(row, self.user))
+
+    def test_pdf_and_structured_candidates_share_relevance_budget(self):
+        for number in range(9):
+            m = Material.objects.create(owner=self.user, title='weak', content_type='paper')
+            v = MaterialVersion.objects.create(material=m, number=1, sha256=str(number)*64,
+                filename='weak.md', format='md', status='ready', size=20, created_by=self.user)
+            Evidence.objects.create(version=v, ordinal=1, line_start=1, line_end=1, text='PINN weak')
+            build_structure(v.pk)
+        m = Material.objects.create(owner=self.user, title='PINN inverse coefficient identification', content_type='paper')
+        v = MaterialVersion.objects.create(material=m, number=1, sha256='f'*64,
+            filename='strong.pdf', format='pdf', status='ready', size=20, created_by=self.user)
+        e = Evidence.objects.create(version=v, ordinal=1, page=1, text='PINN inverse coefficient identification')
+        rows = search_knowledge(self.user, {}, 'PINN inverse coefficient identification')
+        self.assertEqual(rows[0]['id'], e.pk)
+        self.assertNotIn('chunk_id', rows[0])
