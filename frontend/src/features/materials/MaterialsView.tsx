@@ -11,7 +11,7 @@ type Version = {
 };
 type Material = { id: number; title: string; visibility: string; content_type?: string; content_type_label?: string; internal_ai_blocked?: boolean; can_classify?: boolean; source_kind?: string; source_kind_label?: string; legacy_paper_ids?: number[]; can_edit: boolean; versions: Version[] };
 type Evidence = { id: number; ordinal: number; page: number | null; line_start: number | null; line_end: number | null; text: string; review_required: boolean; reviewed_at: string | null };
-type Detail = Version & { evidence: Evidence[]; cards: { id: number; title: string; markdown: string; evidence_ids: number[] }[] };
+type Detail = Version & { structure?: { id: number; parser_version: string; chunks: Array<{ id: number; title_path: string; line_start: number; line_end: number; text: string; oversized: boolean; evidence_ids: number[] }> } | null; evidence: Evidence[]; cards: { id: number; title: string; markdown: string; evidence_ids: number[] }[] };
 const emptyList = { count: 0, results: [] as Material[] };
 const emptyMaterial: Material = { id: 0, title: '', visibility: '', can_edit: false, versions: [] };
 const labels: Record<string, string> = { queued: '等待解析', processing: '正在解析', ready: '可用', needs_review: '待核对', failed: '解析失败' };
@@ -141,6 +141,15 @@ function VersionEvidence({ material, version, reload, refresh }: { material: Mat
     {data.error && <p role="alert">{data.error}</p>}
     {material.can_edit && ['failed', 'queued', 'processing'].includes(data.status) &&
       <button type="button" disabled={busy} onClick={() => mutate('retry')}>重试解析（等待中的任务满 5 分钟后可重试）</button>}
+    {data.structure && <section><h3>按小节查看检索片段</h3>
+      <p className="muted">按标题与自然段组织，原始证据仍保留在下方。展开片段可核对原文行号。</p>
+      {data.structure.chunks.map((chunk) => <details id={`chunk-${chunk.id}`} key={chunk.id}>
+        <summary>{chunk.title_path || '无标题正文'} · 第 {chunk.line_start}–{chunk.line_end} 行</summary>
+        {chunk.oversized && <p>此原子块较长，为保留代码、公式或段落完整性未强行拆分；模型读取仍受字数预算限制。</p>}
+        <pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{chunk.text}</pre>
+        <p>原始证据：{chunk.evidence_ids.map((id) => <a key={id} href={`#evidence-${id}`}> {id} </a>)}</p>
+      </details>)}
+    </section>}
     {data.evidence.map((evidence) => <article className="experiment-project-row" id={`evidence-${evidence.id}`} key={evidence.id}>
       <h3>{evidence.page ? `第 ${evidence.page} 页` : `第 ${evidence.line_start}–${evidence.line_end} 行`}</h3>
       <p>{evidence.reviewed_at ? '已人工核对' : evidence.review_required ? '待核对原文' : '已提取文本'} · 证据 {evidence.id}</p>

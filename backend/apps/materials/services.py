@@ -171,6 +171,14 @@ def parse_version(version_id):
         version.error = ""
         version.parser_version = PARSER_VERSION
         version.save(update_fields=["status", "warnings", "error", "parser_version", "updated_at"])
+        if version.format == "md":
+            try:
+                from apps.materials.structure import build_structure
+                with transaction.atomic():
+                    build_structure(version.pk)
+            except Exception:
+                version.warnings = [*version.warnings, "结构索引未完成，暂按原始证据检索；原文和证据已保留。"]
+                version.save(update_fields=["warnings"])
         TaskRecord.objects.filter(pk=version.task_id).update(
             status="success", progress=100, stage="证据已保存", error="",
             result={"material_id": version.material_id, "version_id": version.pk, "evidence_count": len(rows), "status": version.status},

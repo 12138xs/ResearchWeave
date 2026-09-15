@@ -1,6 +1,6 @@
 """Bounded reads of already discovered, fixed-version evidence."""
-from apps.assistant.knowledge import resolve_source, material_source, slice_source, source_allowed, search_window
-from apps.materials.models import Evidence
+from apps.assistant.knowledge import resolve_source, material_source, chunk_source, slice_source, source_allowed, search_window
+from apps.materials.models import Evidence, StructureChunk
 from apps.search.evidence import ranked_candidates, query_terms
 
 MAX_READ_CHARS = 3000
@@ -17,13 +17,16 @@ def find_in_source(user, scope, source, *, query, budget=MAX_READ_CHARS):
     current = resolve_source(source, user, scope)
     if current['type'] != 'material':
         return {'sources': [], 'notice': '此来源没有材料分页版本，请使用 read_evidence 读取已有正文。'}
-    rows = ranked_candidates(Evidence.objects.filter(version_id=current['version_id'], text__regex=r'\S')
-                             .select_related('version__material'), query, [('text', 10)], limit=3)
+    if current.get('chunk_id'):
+        rows = ranked_candidates(StructureChunk.objects.filter(index_id=current['structure_index_id']).select_related('index__version__material'), query, [('text', 10), ('title_path', 8)], limit=3)
+    else:
+        rows = ranked_candidates(Evidence.objects.filter(version_id=current['version_id'], text__regex=r'\S')
+                                 .select_related('version__material'), query, [('text', 10)], limit=3)
     output, remaining = [], budget
     for row in rows:
         if remaining <= 0:
             break
-        window = search_window(material_source(row), query, query_terms(query))
+        window = search_window(chunk_source(row) if current.get("chunk_id") else material_source(row), query, query_terms(query))
         if len(window['excerpt']) > remaining:
             window['excerpt'] = window['excerpt'][:remaining]
             window['text_end'] = window['text_start'] + len(window['excerpt'])
@@ -55,7 +58,13 @@ def read_source(user, scope, source, *, budget=MAX_READ_CHARS, offset=0, context
         rows = Evidence.objects.filter(version_id=current['version_id'],
             ordinal__gte=max(1, current['ordinal'] - before), ordinal__lte=current['ordinal'] + after,
         ).select_related('version__material').order_by('ordinal')
-        originals = [material_source(row) for row in rows]
+        if current.get('chunk_id'):
+            chunk = StructureChunk.objects.get(pk=current['chunk_id'])
+            rows = StructureChunk.objects.filter(index_id=chunk.index_id, section=chunk.section,
+                ordinal__gte=max(1, chunk.ordinal - before), ordinal__lte=chunk.ordinal + after).select_related('index__version__material').order_by('ordinal')
+            originals = [chunk_source(row) for row in rows]
+        else:
+            originals = [material_source(row) for row in rows]
     else:
         originals = [current]
     output, remaining = [], budget
@@ -89,9 +98,9 @@ def register_sources(registry, rows, remaining, *, max_sources=MAX_SOURCES):
             row['next_offset'] = row['text_end']
             row['truncated'] = True
             limited = True
-        key = (row['type'], row['id'], row.get('text_start', 0), row['excerpt'])
+        key = (row['type'], row['id'], row.get('chunk_id'), row.get('text_start', 0), row['excerpt'])
         label = next((label for label, value in registry.items()
-                      if (value['type'], value['id'], value.get('text_start', 0), value['excerpt']) == key), None)
+                      if (value['type'], value['id'], value.get('chunk_id'), value.get('text_start', 0), value['excerpt']) == key), None)
         if label is None:
             if len(registry) >= max_sources:
                 limited = True

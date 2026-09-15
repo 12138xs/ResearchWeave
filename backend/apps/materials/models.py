@@ -129,3 +129,34 @@ class LegacyPaperLink(models.Model):
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=["paper", "original_sha256"], name="legacy_paper_original_hash")]
+
+
+class StructureIndex(models.Model):
+    version = models.ForeignKey(MaterialVersion, related_name='structure_indexes', on_delete=models.CASCADE)
+    parser_version = models.CharField(max_length=80)
+    source_sha256 = models.CharField(max_length=64)
+    is_current = models.BooleanField(default=False)
+    sections = models.JSONField(default=list)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['version', 'parser_version', 'source_sha256'], name='structure_generation_unique'),
+            models.UniqueConstraint(fields=['version'], condition=models.Q(is_current=True), name='structure_current_unique'),
+        ]
+
+
+class StructureChunk(models.Model):
+    index = models.ForeignKey(StructureIndex, related_name='chunks', on_delete=models.CASCADE)
+    ordinal = models.PositiveIntegerField()
+    section = models.PositiveIntegerField(default=0)
+    title_path = models.TextField(blank=True)
+    text = models.TextField()
+    line_start = models.PositiveIntegerField()
+    line_end = models.PositiveIntegerField()
+    evidence_ids = models.JSONField(default=list)
+    oversized = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['ordinal']
+        constraints = [models.UniqueConstraint(fields=['index', 'ordinal'], name='structure_chunk_ordinal')]

@@ -9,3 +9,4 @@ gunicorn>=23,<24
 python-dotenv>=1,<2
 whitenoise>=6,<7
 pypdf>=6,<7
+markdown-it-py==4.0.0

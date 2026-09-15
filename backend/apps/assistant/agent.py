@@ -24,7 +24,7 @@ TOOLS = [{"type": "function", "function": {
 }}]
 for name, description, extra in [
     ("read_evidence", "读取本轮来源编号对应的固定版本正文，可按字符偏移继续读取；摘要来源仍仅是摘要。", {"offset": {"type": "integer", "minimum": 0}}),
-    ("read_context", "读取材料来源的同版本相邻页或片段，不是章节读取。前后各最多两项。", {"before": {"type": "integer", "minimum": 0, "maximum": 2}, "after": {"type": "integer", "minimum": 0, "maximum": 2}}),
+    ("read_context", "读取同版本相邻页或片段；结构化Markdown限同一小节内的相邻片段。前后各最多两项。", {"before": {"type": "integer", "minimum": 0, "maximum": 2}, "after": {"type": "integer", "minimum": 0, "maximum": 2}}),
     ("find_in_source", "在本轮已找到材料的固定版本全文内，用正文关键词定位实验、限制或附录等远处证据，返回最多三个片段。不扩展材料范围。", {"query": {"type": "string", "minLength": 1, "maxLength": 500}}),
 ]:
     TOOLS.append({"type": "function", "function": {"name": name, "description": description,

@@ -7,7 +7,8 @@ from collections import Counter
 
 from apps.documents.models import DocumentVersion
 from apps.experiments.selectors import accessible_experiments
-from apps.materials.models import Evidence
+from apps.materials.models import Evidence, StructureChunk
+from apps.materials.structure import verified_chunk_text
 from apps.materials.selectors import materials
 from apps.papers.models import Paper
 from apps.search.evidence import query_terms, visible_evidence, ranked_candidates
@@ -120,6 +121,19 @@ def material_source(row):
         ordinal=row.ordinal, page=row.page, line_start=row.line_start, line_end=row.line_end)
 
 
+def chunk_source(chunk):
+    version = chunk.index.version
+    text = verified_chunk_text(chunk)
+    location = f"版本 {version.number}，{chunk.title_path or '无标题正文'}，第 {chunk.line_start}–{chunk.line_end} 行"
+    return source_payload("material", chunk.evidence_ids[0], version.material.title, text, location,
+        f"/materials/{version.material_id}?version={version.pk}#chunk-{chunk.pk}", version.material.source_kind,
+        content_type=version.material.content_type, material_id=version.material_id,
+        version_id=version.pk, version_number=version.number, version_sha256=version.sha256,
+        chunk_id=chunk.pk, structure_index_id=chunk.index_id, ordinal=chunk.ordinal,
+        title_path=chunk.title_path, line_start=chunk.line_start, line_end=chunk.line_end,
+        oversized=chunk.oversized)
+
+
 def resolve_source(source, user, scope=None):
     """Resolve a native fixed identity. Never accepts filesystem paths."""
     if not _source_visible(source, user):
@@ -129,7 +143,13 @@ def resolve_source(source, user, scope=None):
         row = Evidence.objects.select_related("version__material").get(pk=pk)
         if row.version.status not in {"ready", "needs_review"} or (scope is not None and not material_scope(user, scope).filter(pk=row.version.material_id).exists()):
             raise ValueError("材料不在读取范围")
-        current = material_source(row)
+        if "chunk_id" in source:
+            chunk = StructureChunk.objects.select_related("index__version__material").get(pk=source["chunk_id"], index__version_id=row.version_id)
+            if not chunk.evidence_ids or chunk.evidence_ids[0] != pk:
+                raise ValueError("分片锚点不匹配")
+            current = chunk_source(chunk)
+        else:
+            current = material_source(row)
     elif kind == "document":
         row = DocumentVersion.objects.select_related("document").get(pk=pk)
         if scope is not None and not _scoped(DocumentVersion.objects.filter(pk=pk), scope, "document_ids", "document_id", "document__space_id").exists():
@@ -157,7 +177,7 @@ def resolve_source(source, user, scope=None):
         current = source_payload(kind, pk, row.title, row.body, "成员明确发布的研究记录，非论文结论", source_kind="human_record")
     else:
         raise ValueError("来源类型不可读取")
-    for field in ("sha256", "source_kind", "content_type", "material_id", "version_id", "version_sha256", "ordinal"):
+    for field in ("sha256", "chunk_id", "structure_index_id", "source_kind", "content_type", "material_id", "version_id", "version_sha256", "ordinal"):
         if field == "source_kind" and kind != "material" and source.get(field) == "unclassified":
             continue  # Legacy snapshots predate native record classification.
         if field in source and source[field] != current.get(field):
@@ -189,7 +209,17 @@ def _search_once(user, scope, query):
         rows.append(search_window(source_payload(kind, pk, title, text, location, url, source_kind, score=score), query, terms))
 
     evidence = visible_evidence(user).filter(version__material_id__in=material_scope(user, scope).values("pk"))
+    chunks = StructureChunk.objects.filter(index__is_current=True, index__version_id__in=evidence.values('version_id')).select_related('index__version__material')
     counts, seen = Counter(), set()
+    for chunk in ranked_candidates(chunks, query, [('text', 10), ('title_path', 8), ('index__version__material__title', 4)]):
+        group = chunk.index.version.sha256
+        if counts[group] >= 2:
+            continue
+        rows.append(search_window({**chunk_source(chunk), 'score': chunk.score}, query, terms))
+        counts[group] += 1
+        if len(rows) >= 8:
+            break
+    evidence = evidence.exclude(version_id__in=chunks.values('index__version_id'))
     for row in ranked_candidates(evidence, query, [("text", 10), ("version__material__title", 4)]):
         identity = (row.version.sha256, row.ordinal)
         if identity in seen or counts[row.version.sha256] >= 2:
@@ -233,7 +263,7 @@ def search_knowledge(user, scope, query, queries=None):
     fused, scores, query_leaders = {}, Counter(), []
     for value in dict.fromkeys(values):
         for rank, row in enumerate(_search_once(user, scope, value), 1):
-            key = (row["type"], row["id"])
+            key = (row["type"], row["id"], row.get("chunk_id"))
             if rank == 1 and key not in query_leaders:
                 query_leaders.append(key)
             # Keep the first concrete excerpt and fuse ranks; reads expose further text.
