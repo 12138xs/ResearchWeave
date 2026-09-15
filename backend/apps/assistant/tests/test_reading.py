@@ -147,15 +147,18 @@ class ReadingTests(TestCase):
         self.assertEqual(used, 18000)
         self.assertEqual(registry['S1']['excerpt'], 'x'*600)
 
-    def test_read_context_rejects_nonmaterial_and_path_like_identity(self):
+    def test_read_context_accepts_structured_document_but_rejects_legacy_and_path(self):
         from apps.assistant.reading import read_source
         from apps.documents.models import Document, DocumentVersion
         doc = Document.objects.create(title='geometry document')
         version = DocumentVersion.objects.create(document=doc, markdown='geometry '+ 'data '*300)
         source = next(row for row in search_knowledge(self.user, {'document_ids': [doc.pk]}, 'geometry') if row['id'] == version.pk)
         self.assertGreater(len(read_source(self.user, {}, source)['sources'][0]['excerpt']), 600)
+        self.assertTrue(read_source(self.user, {}, source, context=True)['sources'])
+        from apps.assistant.knowledge import source_payload
+        legacy = source_payload('document', version.pk, doc.title, version.markdown, 'legacy')
         with self.assertRaises(ValueError):
-            read_source(self.user, {}, source, context=True)
+            read_source(self.user, {}, legacy, context=True)
         with self.assertRaises(ValueError):
             read_source(self.user, {}, {'type': 'path', 'id': '/etc/passwd'})
 
