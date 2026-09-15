@@ -114,3 +114,37 @@ class CategoryTests(TestCase):
         self.assertIn('PINN paper evidence', payload)
         self.assertNotIn('forbidden_marker', payload)
         self.assertEqual(model.call_count, 3)
+
+    @patch('apps.assistant.tasks.answer_question.apply_async')
+    def test_session_scope_persists_and_conflicting_retry_is_rejected(self, publish):
+        payload = {'question': 'PINN', 'request_id': str(uuid.uuid4()), 'scope_json': self.scope}
+        response = self.client.post('/api/assistant/start/', payload, content_type='application/json')
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(response.json()['scope_json'], self.scope)
+        payload['scope_json'] = {'content_types': ['document']}
+        conflict = self.client.post('/api/assistant/start/', payload, content_type='application/json')
+        self.assertEqual(conflict.status_code, 409)
+
+    @patch('apps.search.assisted._json_reply')
+    def test_assisted_search_does_not_send_proposals(self, model):
+        from apps.search.assisted import assisted_search
+        model.side_effect = [{'queries': ['PINN']}, {'evidence_ids': []}]
+        assisted_search(self.user, {'q': 'PINN'})
+        self.assertEqual(model.call_count, 2)
+        candidates = json.loads(model.call_args_list[1].args[0][1]['content'])['candidates']
+        self.assertNotIn(self.proposal.pk, [r['evidence_id'] for r in candidates])
+
+    @patch('apps.assistant.agent.call_minimax_chat')
+    def test_reclassification_during_model_request_stops_next_transmission(self, model):
+        def change(messages, **kwargs):
+            if model.call_count == 1:
+                return search('PINN')
+            Material.objects.filter(pk=self.paper.version.material_id).update(content_type='proposal', internal_ai_blocked=True)
+            return reply({'answer': '材料事实 [S1]'})
+        model.side_effect = change
+        session = AssistantSession.objects.create(created_by=self.user, scope_json=self.scope)
+        exchange = AssistantExchange.objects.create(session=session, question='PINN', status='queued', request_id=uuid.uuid4())
+        run_exchange(exchange.pk, 1)
+        exchange.refresh_from_db()
+        self.assertEqual(exchange.status, 'failed')
+        self.assertEqual(model.call_count, 2)

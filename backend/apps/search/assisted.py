@@ -31,7 +31,7 @@ def _json_reply(messages, usage):
 
 
 def _current_rows(user, rows):
-    ids = set(visible_evidence(user).filter(pk__in=[row["evidence_id"] for row in rows]).values_list("pk", flat=True))
+    ids = set(visible_evidence(user).filter(version__material__internal_ai_blocked=False).exclude(version__material__content_type="proposal").filter(pk__in=[row["evidence_id"] for row in rows]).values_list("pk", flat=True))
     return [row for row in rows if row["evidence_id"] in ids]
 
 
