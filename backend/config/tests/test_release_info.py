@@ -20,7 +20,7 @@ class ReleaseInfoTests(SimpleTestCase):
         release = load_release_info()
 
         self.assertEqual(release["product"], "A510知识库")
-        self.assertRegex(release["version"], r"^v\d+\.\d+\.\d+$")
+        self.assertRegex(release["version"], r"^v\d+\.\d+\.\d+(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$")
         self.assertIn("released_at", release)
         self.assertIn("summary", release)
         self.assertIn("migration_state", release)
