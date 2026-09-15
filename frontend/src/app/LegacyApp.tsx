@@ -2779,13 +2779,27 @@ function NewDocument() {
 
 function DocumentDetail() {
   const { id } = useParams();
+  const citationLocation = useLocation();
+  const citationParams = new URLSearchParams(citationLocation.search);
+  const fixedVersion = citationParams.get("document_version");
+  const fixedIndex = citationParams.get("structure_index");
+  const citationQuery = new URLSearchParams();
+  if (fixedVersion) citationQuery.set("document_version", fixedVersion);
+  if (fixedIndex) citationQuery.set("structure_index", fixedIndex);
   const [reloadToken, setReloadToken] = useState(0);
   const { data: doc, loading, error } = useApiData<Doc | null>(
-    id ? `/api/documents/${id}/?reload=${reloadToken}` : '/api/documents/0/',
+    id ? `/api/documents/${id}/?reload=${reloadToken}&${citationQuery.toString()}` : '/api/documents/0/',
     null
   );
   const [editing, setEditing] = useState(false);
   const [viewMode, setViewMode] = useState<'rendered' | 'source'>('rendered');
+  useEffect(() => {
+    if (!doc || !/^#document-chunk-\d+$/.test(citationLocation.hash)) return;
+    const element = document.getElementById(citationLocation.hash.slice(1));
+    if (element instanceof HTMLDetailsElement) element.open = true;
+    element?.scrollIntoView({ block: 'center' });
+  }, [doc, citationLocation.hash]);
+
 
   if (loading) {
     return (
@@ -2821,11 +2835,20 @@ function DocumentDetail() {
           <Link className="secondary-button link-button" to="/docs">
             返回文档库
           </Link>
-          <button type="button" onClick={() => setEditing((value) => !value)}>
+          <button type="button" disabled={Boolean(fixedVersion)} onClick={() => setEditing((value) => !value)}>
             {editing ? '查看正文' : '编辑文档'}
           </button>
         </div>
       </header>
+      {fixedVersion && <p className="muted">正在查看引用固定版本。<Link to={`/docs/${id}`}>打开当前版本并编辑</Link></p>}
+      {doc.structure && <section className="doc-viewer" aria-label="文档结构片段">
+        <h2>按小节查看检索片段</h2>
+        {doc.structure.chunks.map((chunk) => <details key={chunk.id} id={`document-chunk-${chunk.id}`}>
+          <summary>{chunk.title_path || '无标题正文'} · 第 {chunk.line_start}–{chunk.line_end} 行</summary>
+          {chunk.oversized && <p>此完整块较长，Agent 单次读取仍受字数预算限制。</p>}
+          <pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{chunk.text}</pre>
+        </details>)}
+      </section>}
       {editing ? (
         <DocumentEditor
           initialDoc={doc}

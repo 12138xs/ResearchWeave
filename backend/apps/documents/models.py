@@ -193,3 +193,33 @@ class DocumentImportCandidate(models.Model):
 
     def __str__(self) -> str:
         return self.proposed_title
+
+
+class DocumentStructureIndex(models.Model):
+    version = models.ForeignKey(DocumentVersion, related_name='doc_structure_indexes', on_delete=models.CASCADE)
+    parser_version = models.CharField(max_length=80)
+    source_sha256 = models.CharField(max_length=64)
+    is_current = models.BooleanField(default=False)
+    sections = models.JSONField(default=list)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['version', 'parser_version', 'source_sha256'], name='doc_structure_generation_unique'),
+            models.UniqueConstraint(fields=['version'], condition=models.Q(is_current=True), name='doc_structure_current_unique'),
+        ]
+
+
+class DocumentStructureChunk(models.Model):
+    index = models.ForeignKey(DocumentStructureIndex, related_name='chunks', on_delete=models.CASCADE)
+    ordinal = models.PositiveIntegerField()
+    section = models.PositiveIntegerField(default=0)
+    title_path = models.TextField(blank=True)
+    text = models.TextField()
+    line_start = models.PositiveIntegerField()
+    line_end = models.PositiveIntegerField()
+    oversized = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['ordinal']
+        constraints = [models.UniqueConstraint(fields=['index', 'ordinal'], name='doc_structure_chunk_ordinal')]

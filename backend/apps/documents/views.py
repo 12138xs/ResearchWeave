@@ -68,7 +68,45 @@ class DocumentListView(DocumentQuerysetMixin, ListCreateAPIView):
 
 
 class DocumentDetailView(DocumentQuerysetMixin, RetrieveUpdateAPIView):
-    pass
+    def retrieve(self, request, *args, **kwargs):
+        document = self.get_object()
+        data = self.get_serializer(document).data
+        versions = document.versions.all()
+        selected = request.query_params.get('document_version')
+        if selected is not None:
+            if not selected.isdecimal() or len(selected) > 18:
+                return Response({'detail': '文档版本无效'}, status=400)
+            version = get_object_or_404(versions, pk=int(selected))
+        else:
+            version = versions.filter(is_current=True).first()
+        data['selected_version_id'] = version.pk if version else None
+        data['historical_version'] = bool(selected)
+        data['structure'] = None
+        if version:
+            data['markdown'] = version.markdown
+            data['current_version'] = version.version
+            index_id = request.query_params.get('structure_index')
+            if index_id is not None:
+                if not index_id.isdecimal() or len(index_id) > 18:
+                    return Response({'detail': '结构批次无效'}, status=400)
+                index = get_object_or_404(version.structure_indexes, pk=int(index_id))
+            else:
+                index = version.structure_indexes.filter(is_current=True).first()
+            if index:
+                from apps.documents.structure import verified_chunk_text
+                chunks = list(index.chunks.select_related('index__version').all())
+                try:
+                    for chunk in chunks:
+                        verified_chunk_text(chunk)
+                except ValueError:
+                    return Response({'detail': '结构索引与原文不一致，请重建索引'}, status=409)
+                data['structure'] = {'id': index.pk, 'parser_version': index.parser_version,
+                    'sections': index.sections, 'chunks': [{
+                        'id': chunk.pk, 'title_path': chunk.title_path, 'text': chunk.text,
+                        'line_start': chunk.line_start, 'line_end': chunk.line_end,
+                        'oversized': chunk.oversized,
+                    } for chunk in chunks]}
+        return Response(data)
 
 
 class DocumentImportBatchListView(ReadOnlyOrAuthenticatedWriteMixin, ListCreateAPIView):

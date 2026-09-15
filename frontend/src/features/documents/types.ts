@@ -12,6 +12,9 @@ export type Doc = {
   keywords: string[];
   markdown?: string;
   current_version?: number | null;
+  structure?: { id: number; parser_version: string; chunks: {
+    id: number; title_path: string; text: string; line_start: number; line_end: number; oversized: boolean;
+  }[] } | null;
   updated_at: string;
 };
 

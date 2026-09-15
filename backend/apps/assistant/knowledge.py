@@ -5,7 +5,8 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
 from collections import Counter
 
-from apps.documents.models import DocumentVersion
+from apps.documents.models import DocumentVersion, DocumentStructureChunk
+from apps.documents.structure import verified_chunk_text as verified_document_chunk_text
 from apps.experiments.selectors import accessible_experiments
 from apps.materials.models import Evidence, StructureChunk
 from apps.materials.structure import verified_chunk_text
@@ -134,6 +135,16 @@ def chunk_source(chunk):
         oversized=chunk.oversized)
 
 
+
+def document_chunk_source(chunk):
+    version = chunk.index.version
+    return source_payload('document', version.pk, version.document.title, verified_document_chunk_text(chunk),
+        f"文档版本 {version.version}，{chunk.title_path or '无标题正文'}，第 {chunk.line_start}–{chunk.line_end} 行",
+        f"/docs/{version.document_id}?document_version={version.pk}&structure_index={chunk.index_id}#document-chunk-{chunk.pk}",
+        chunk_id=chunk.pk, structure_index_id=chunk.index_id, ordinal=chunk.ordinal,
+        version_id=version.pk, version_sha256=chunk.index.source_sha256, content_type='document',
+        title_path=chunk.title_path, line_start=chunk.line_start, line_end=chunk.line_end, oversized=chunk.oversized)
+
 def resolve_source(source, user, scope=None):
     """Resolve a native fixed identity. Never accepts filesystem paths."""
     if not _source_visible(source, user):
@@ -154,7 +165,11 @@ def resolve_source(source, user, scope=None):
         row = DocumentVersion.objects.select_related("document").get(pk=pk)
         if scope is not None and not _scoped(DocumentVersion.objects.filter(pk=pk), scope, "document_ids", "document_id", "document__space_id").exists():
             raise ValueError("文档不在读取范围")
-        current = source_payload(kind, pk, row.document.title, row.markdown, f"文档版本 {row.version}，引用时正文摘录")
+        if 'chunk_id' in source:
+            chunk = DocumentStructureChunk.objects.select_related('index__version__document').get(pk=source['chunk_id'], index__version_id=pk)
+            current = document_chunk_source(chunk)
+        else:
+            current = source_payload(kind, pk, row.document.title, row.markdown, f"文档版本 {row.version}，引用时正文摘录")
     elif kind == "paper":
         row = Paper.objects.get(pk=pk)
         if scope is not None and not _scoped(Paper.objects.filter(pk=pk), scope, "paper_ids").exists():
@@ -226,8 +241,25 @@ def _search_once(user, scope, query):
             break
     documents = _scoped(DocumentVersion.objects.filter(is_current=True).select_related("document"), scope,
                         "document_ids", "document_id", "document__space_id")
-    for row in _matches(documents, terms, ["markdown", "document__title"])[:4]:
-        add("document", row.pk, row.document.title, row.markdown, f"文档版本 {row.version}，引用时正文摘录", score=row.score)
+    document_chunks = DocumentStructureChunk.objects.filter(index__is_current=True,
+        index__version_id__in=documents.values('pk')).select_related('index__version__document')
+    doc_candidates = [(row.score, True, row) for row in ranked_candidates(document_chunks, query,
+        [('text', 10), ('title_path', 8), ('index__version__document__title', 4)])]
+    unindexed = documents.exclude(pk__in=document_chunks.values('index__version_id'))
+    doc_candidates += [(row.score, False, row) for row in _matches(unindexed, terms, ['markdown', 'document__title'])]
+    doc_counts, doc_total = Counter(), 0
+    for score, structured, row in sorted(doc_candidates, key=lambda item: (-item[0], item[2].pk)):
+        version_id = row.index.version_id if structured else row.pk
+        if doc_counts[version_id] >= 2:
+            continue
+        if structured:
+            rows.append(search_window({**document_chunk_source(row), 'score': score}, query, terms))
+        else:
+            add('document', row.pk, row.document.title, row.markdown, f'文档版本 {row.version}，引用时正文摘录', score=score)
+        doc_counts[version_id] += 1
+        doc_total += 1
+        if doc_total >= 4:
+            break
     papers = _scoped(Paper.objects.all(), scope, "paper_ids")
     for row in _matches(papers, terms, ["title", "abstract"])[:4]:
         add("paper", row.pk, row.title, row.abstract, "论文摘要，非全文；引用时快照", source_kind="paper_abstract", score=row.score)

@@ -1,6 +1,7 @@
 """Bounded reads of already discovered, fixed-version evidence."""
-from apps.assistant.knowledge import resolve_source, material_source, chunk_source, slice_source, source_allowed, search_window
+from apps.assistant.knowledge import resolve_source, material_source, chunk_source, document_chunk_source, slice_source, source_allowed, search_window
 from apps.materials.models import Evidence, StructureChunk
+from apps.documents.models import DocumentStructureChunk
 from apps.search.evidence import ranked_candidates, query_terms
 
 MAX_READ_CHARS = 3000
@@ -15,9 +16,12 @@ def find_in_source(user, scope, source, *, query, budget=MAX_READ_CHARS):
     if type(budget) is not int or not 1 <= budget <= MAX_READ_CHARS:
         raise ValueError('读取预算必须为 1–3000 字')
     current = resolve_source(source, user, scope)
-    if current['type'] != 'material':
+    document_chunk = current['type'] == 'document' and current.get('chunk_id')
+    if current['type'] != 'material' and not document_chunk:
         return {'sources': [], 'notice': '此来源没有材料分页版本，请使用 read_evidence 读取已有正文。'}
-    if current.get('chunk_id'):
+    if document_chunk:
+        rows = ranked_candidates(DocumentStructureChunk.objects.filter(index_id=current['structure_index_id']).select_related('index__version__document'), query, [('text', 10), ('title_path', 8)], limit=3)
+    elif current.get('chunk_id'):
         rows = ranked_candidates(StructureChunk.objects.filter(index_id=current['structure_index_id']).select_related('index__version__material'), query, [('text', 10), ('title_path', 8)], limit=3)
     else:
         rows = ranked_candidates(Evidence.objects.filter(version_id=current['version_id'], text__regex=r'\S')
@@ -26,7 +30,7 @@ def find_in_source(user, scope, source, *, query, budget=MAX_READ_CHARS):
     for row in rows:
         if remaining <= 0:
             break
-        window = search_window(chunk_source(row) if current.get("chunk_id") else material_source(row), query, query_terms(query))
+        window = search_window(document_chunk_source(row) if document_chunk else chunk_source(row) if current.get("chunk_id") else material_source(row), query, query_terms(query))
         if len(window['excerpt']) > remaining:
             window['excerpt'] = window['excerpt'][:remaining]
             window['text_end'] = window['text_start'] + len(window['excerpt'])
@@ -53,12 +57,18 @@ def read_source(user, scope, source, *, budget=MAX_READ_CHARS, offset=0, context
     if offset > current['total_chars']:
         raise ValueError("偏移超出当前证据")
     if context:
-        if source['type'] != 'material' or offset:
+        document_chunk = current['type'] == 'document' and current.get('chunk_id')
+        if (source['type'] != 'material' and not document_chunk) or offset:
             raise ValueError("相邻读取仅支持材料固定版本；其他来源请用正文读取")
         rows = Evidence.objects.filter(version_id=current['version_id'],
             ordinal__gte=max(1, current['ordinal'] - before), ordinal__lte=current['ordinal'] + after,
         ).select_related('version__material').order_by('ordinal')
-        if current.get('chunk_id'):
+        if document_chunk:
+            chunk = DocumentStructureChunk.objects.get(pk=current['chunk_id'])
+            rows = DocumentStructureChunk.objects.filter(index_id=chunk.index_id, section=chunk.section,
+                ordinal__gte=max(1, chunk.ordinal - before), ordinal__lte=chunk.ordinal + after).select_related('index__version__document').order_by('ordinal')
+            originals = [document_chunk_source(row) for row in rows]
+        elif current.get('chunk_id'):
             chunk = StructureChunk.objects.get(pk=current['chunk_id'])
             rows = StructureChunk.objects.filter(index_id=chunk.index_id, section=chunk.section,
                 ordinal__gte=max(1, chunk.ordinal - before), ordinal__lte=chunk.ordinal + after).select_related('index__version__material').order_by('ordinal')
