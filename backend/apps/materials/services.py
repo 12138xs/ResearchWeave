@@ -171,7 +171,7 @@ def parse_version(version_id):
         version.error = ""
         version.parser_version = PARSER_VERSION
         version.save(update_fields=["status", "warnings", "error", "parser_version", "updated_at"])
-        if version.format == "md":
+        if version.format in {"md", "pdf"}:
             try:
                 from apps.materials.structure import build_structure
                 with transaction.atomic():

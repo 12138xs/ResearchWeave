@@ -78,7 +78,14 @@ def split_markdown(text):
 def canonical(version):
     rows = list(version.evidence.order_by('ordinal'))
     expected = 1
-    for row in rows:
+    for number, row in enumerate(rows, 1):
+        if version.format == 'pdf':
+            if row.page != number or row.ordinal != number:
+                raise ValueError('PDF页码不连续')
+            row.line_start = expected
+            row.line_end = expected + len(row.text.split('\n')) - 1
+            expected = row.line_end + 1
+            continue
         if row.page or row.line_start != expected or row.line_end != row.line_start + len(row.text.split('\n')) - 1:
             raise ValueError('证据行号不连续，不能构建结构索引')
         expected = row.line_end + 1
@@ -88,20 +95,28 @@ def canonical(version):
 @transaction.atomic
 def build_structure(version_id):
     version = MaterialVersion.objects.select_for_update().get(pk=version_id)
-    if version.format != 'md' or version.status not in {'ready', 'needs_review'}:
+    if version.format not in {'md', 'pdf'} or version.status not in {'ready', 'needs_review'}:
         return None
     text, evidence = canonical(version)
     if len(text) > 4_000_000:
         raise ValueError('结构正文超出限制')
     source_hash = digest(text)
-    old = version.structure_indexes.filter(parser_version=PARSER_VERSION, source_sha256=source_hash).first()
+    parser = PARSER_VERSION
+    if version.format == 'pdf':
+        from apps.materials.pdf_structure import PARSER_VERSION as PDF_PARSER
+        parser = PDF_PARSER
+    old = version.structure_indexes.filter(parser_version=parser, source_sha256=source_hash).first()
     if old:
         version.structure_indexes.filter(is_current=True).exclude(pk=old.pk).update(is_current=False)
         if not old.is_current:
             old.is_current = True; old.save(update_fields=['is_current'])
         return old
-    sections, parts = split_markdown(text)
-    index = StructureIndex.objects.create(version=version, parser_version=PARSER_VERSION, source_sha256=source_hash, sections=sections)
+    if version.format == 'pdf':
+        from apps.materials.pdf_structure import split_pdf_pages, extract_outline
+        sections, parts = split_pdf_pages(text, evidence, extract_outline(version))
+    else:
+        sections, parts = split_markdown(text)
+    index = StructureIndex.objects.create(version=version, parser_version=parser, source_sha256=source_hash, sections=sections)
     chunks = []
     for n, part in enumerate(parts, 1):
         a, b = part['start'] + 1, part['end']
@@ -115,7 +130,23 @@ def build_structure(version_id):
 
 
 def verified_chunk_text(chunk):
-    rows = list(chunk.index.version.evidence.filter(pk__in=chunk.evidence_ids).order_by('ordinal'))
+    if chunk.index.version.format == 'pdf':
+        original, all_rows = canonical(chunk.index.version)
+        rows = [row for row in all_rows if row.pk in chunk.evidence_ids]
+        if not rows or [row.pk for row in rows] != chunk.evidence_ids:
+            raise ValueError('分片原始证据已变化')
+        lines = original.split('\n')
+        if not 1 <= chunk.line_start <= chunk.line_end <= len(lines):
+            raise ValueError('PDF分片坐标无效')
+        expected_ids = [row.pk for row in all_rows if row.line_start <= chunk.line_end and row.line_end >= chunk.line_start]
+        text = '\n'.join(lines[chunk.line_start - 1:chunk.line_end])
+        if chunk.line_end < len(lines):
+            text += '\n'
+        if text != chunk.text or expected_ids != chunk.evidence_ids:
+            raise ValueError('PDF分片与原始证据不一致')
+        return text
+    else:
+        rows = list(chunk.index.version.evidence.filter(pk__in=chunk.evidence_ids).order_by('ordinal'))
     if not rows or [r.pk for r in rows] != chunk.evidence_ids:
         raise ValueError('分片原始证据已变化')
     lines = '\n'.join(r.text for r in rows).split('\n')

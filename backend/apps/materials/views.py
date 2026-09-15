@@ -99,6 +99,12 @@ class VersionDetail(APIView):
             index = version.structure_indexes.filter(is_current=True).first()
         data["structure"] = {"id": index.pk, "parser_version": index.parser_version, "sections": index.sections,
             "chunks": list(index.chunks.values("id", "ordinal", "title_path", "line_start", "line_end", "text", "oversized", "evidence_ids"))} if index else None
+        if index and version.format == 'pdf':
+            page_map = dict(version.evidence.values_list('pk', 'page'))
+            for chunk in data['structure']['chunks']:
+                pages = [page_map[pk] for pk in chunk['evidence_ids'] if pk in page_map]
+                chunk['page_start'] = min(pages) if pages else None
+                chunk['page_end'] = max(pages) if pages else None
         data["evidence"] = list(version.evidence.values("id", "ordinal", "page", "line_start", "line_end", "text", "review_required", "reviewed_at"))
         data["cards"] = [{"id": card.pk, "title": card.title, "markdown": card.markdown,
                           "evidence_ids": [row.pk for row in card.evidence.all()], "kind": "derived"}

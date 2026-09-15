@@ -126,13 +126,17 @@ def chunk_source(chunk):
     version = chunk.index.version
     text = verified_chunk_text(chunk)
     location = f"版本 {version.number}，{chunk.title_path or '无标题正文'}，第 {chunk.line_start}–{chunk.line_end} 行"
+    pages = list(version.evidence.filter(pk__in=chunk.evidence_ids, page__isnull=False).order_by('ordinal').values_list('page', flat=True)) if version.format == 'pdf' else []
+    if pages:
+        location = f"版本 {version.number}，{chunk.title_path or '未确认章节（页级回退）'}，第 {pages[0]}–{pages[-1]} 页；版面与公式仍需核对"
+
     return source_payload("material", chunk.evidence_ids[0], version.material.title, text, location,
         f"/materials/{version.material_id}?version={version.pk}&structure_index={chunk.index_id}#chunk-{chunk.pk}", version.material.source_kind,
         content_type=version.material.content_type, material_id=version.material_id,
         version_id=version.pk, version_number=version.number, version_sha256=version.sha256,
         chunk_id=chunk.pk, structure_index_id=chunk.index_id, ordinal=chunk.ordinal,
         title_path=chunk.title_path, line_start=chunk.line_start, line_end=chunk.line_end,
-        oversized=chunk.oversized)
+        oversized=chunk.oversized, page=pages[0] if pages else None, page_end=pages[-1] if pages else None)
 
 
 
