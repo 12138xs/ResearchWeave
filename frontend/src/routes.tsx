@@ -43,6 +43,7 @@ export const navGroups: NavGroup[] = [
     label: '运行管理',
     routes: [
       { path: '/feedback', label: '意见箱', description: '团队改进建议' },
+      { path: '/release-notes', label: '版本说明', description: '修改摘要' },
       { path: '/tasks', label: '任务队列', description: '异步进度' },
       { path: '/settings', label: '系统设置', description: '版本运行' }
     ]

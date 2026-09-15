@@ -24,6 +24,7 @@ import { KnowledgeSpaceMapView } from '../features/research_map/KnowledgeSpaceMa
 import type { CatalogStats, KeywordEntry, KeywordSuggestion, KnowledgeSpace } from '../features/library/types';
 import { UploadPaper } from '../features/papers/UploadPaper';
 import type { Paper, PaperDeepProfile, PaperDeepProfileListResponse, PaperMetadataCandidate, PaperMetadataForm, PaperMetadataSuggestion, PaperQaHistoryItem, PaperQaHistoryResponse, PaperQaResponse, PaperReferenceImportResponse, PaperSearchResponse } from '../features/papers/types';
+import { ReleaseNotesView } from '../features/releases/ReleaseNotesView';
 import { FeedbackView } from '../features/feedback/FeedbackView';
 import { TasksView } from '../features/tasks/TasksView';
 import type { TaskItem, TaskStatusResponse } from '../features/tasks/types';
@@ -2986,7 +2987,8 @@ export function LegacyApp() {
         <Route path="/experiments/:id" element={<ExperimentDetailView />} />
         <Route path="/knowledge-spaces" element={<KnowledgeSpaceManager />} />
         <Route path="/knowledge-spaces/:id" element={<KnowledgeSpaceMapView />} />
-        <Route path="/feedback" element={<FeedbackView />} />
+        <Route path="/release-notes" element={<ReleaseNotesView />} />
+            <Route path="/feedback" element={<FeedbackView />} />
             <Route path="/tasks" element={<TasksView />} />
         <Route path="/search" element={<SearchView />} />
         <Route path="/quality" element={<QualityIssuesView />} />

@@ -1,17 +1,17 @@
 .sidebar-nav a .feedback-nav-label { color: #856000; background: #fef08a; padding: 2px 7px; border-radius: 4px; font-weight: 700; }
 :root[data-theme="dark"] .sidebar-nav a .feedback-nav-label { color: #fde047; background: #3d3212; }
-.feedback-page { max-width: 1040px; margin: 0 auto; }
+.feedback-page { width: 100%; max-width: 1040px; min-width: 0; margin: 0 auto; box-sizing: border-box; }
 .feedback-page .page-header h1 { color: var(--accent); }
 .feedback-compose, .feedback-list { border: 1px solid var(--border); border-radius: 16px; padding: 24px; background: var(--surface); margin-bottom: 24px; }
-.feedback-compose { border-top: 3px solid #eab308; }
+.feedback-compose { position: relative; border-top: 3px solid #eab308; }
 .feedback-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
 .feedback-heading h2 { margin: 0; font-size: 18px; }
 .feedback-heading > span, .feedback-count, .feedback-meta { color: var(--muted); font-size: 13px; }
 .feedback-compose label { display: block; font-weight: 600; margin-bottom: 8px; }
-.feedback-compose textarea { display: block; width: 100%; resize: vertical; min-height: 140px; line-height: 1.75; box-sizing: border-box; }
+.feedback-compose textarea { display: block; width: 100%; resize: none; height: 180px; min-height: 180px; max-height: 180px; overflow-y: auto; line-height: 1.75; box-sizing: border-box; }
 .feedback-actions { display: flex; align-items: center; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
 .feedback-count { margin-left: auto; }
-.feedback-features { padding: 14px; background: var(--accent-soft); border: 1px solid var(--accent-border); border-radius: 10px; margin-top: 14px; }
+.feedback-features { position: absolute; z-index: 10; left: 24px; right: 24px; top: calc(100% - 40px); max-height: 240px; overflow-y: auto; box-shadow: 0 8px 24px #0002; padding: 14px; background: var(--accent-soft); border: 1px solid var(--accent-border); border-radius: 10px; margin-top: 14px; }
 .feedback-features p { margin: 0 0 10px; color: var(--accent); font-size: 13px; }
 .feedback-features > div, .feedback-tags { display: flex; flex-wrap: wrap; gap: 8px; }
 .feedback-error { color: var(--danger); }
@@ -29,3 +29,7 @@
   .feedback-heading > span { width: 100%; }
   .feedback-actions { gap: 8px; }
 }
+
+.feedback-status { min-height: 28px; margin-top: 8px; }
+.feedback-status p { margin: 0; }
+@media (max-width: 600px) { .feedback-features { left: 16px; right: 16px; } }

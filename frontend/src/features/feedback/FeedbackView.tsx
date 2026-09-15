@@ -94,8 +94,8 @@ export function FeedbackView() {
           <p>选择功能插入 @ 标记，可关联多个功能；不会发送通知。</p>
           <div>{feed?.catalog.map((feature) => <button type="button" className="secondary" key={feature.key} onClick={() => mention(feature)}>@{feature.label}</button>)}</div>
         </div>}
-        {error && <p role="alert" className="feedback-error">{error}</p>}
-        {notice && <p role="status" className="feedback-notice">{notice}</p>}
+        <div className="feedback-status">{error && <p role="alert" className="feedback-error">{error}</p>}
+        {notice && <p role="status" className="feedback-notice">{notice}</p>}</div>
       </form>
     </section>
     <section className="feedback-list" aria-label="团队改进意见" aria-busy={loading}>
