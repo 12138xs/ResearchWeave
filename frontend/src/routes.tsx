@@ -29,7 +29,7 @@ export const navGroups: NavGroup[] = [
     label: '研究流程',
     routes: [
       { path: '/experiments', label: '实验与复现', description: '实验记录' },
-      { path: '/assistant', label: '研究助理', description: '有源辅助' }
+      { path: '/agent', label: '内置科研 Agent', description: 'MiniMax · 试用' }
     ]
   },
   {

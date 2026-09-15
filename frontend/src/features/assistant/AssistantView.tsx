@@ -92,7 +92,9 @@ export function AssistantView() {
     pending.current = null; setQuestion(''); setConnection('');
   });
   return <main className="page">
-    <Header eyebrow="" title="科研助理" description="直接按方向提问，自动查找材料、补读依据并讨论科研思路。" />
+    <Header eyebrow="MiniMax M3 · 试用版" title="内置科研 Agent" description="直接按方向提问，自动查找材料、补读依据并讨论科研思路。" />
+    <p className="muted" role="note">无需勾选论文，默认检索你可访问的知识库。回答仍可能误读来源或适用条件，请展开引用核对后使用。</p>
+    <p><a href="/materials">管理与添加材料</a> · <a href="/search">查询知识库</a></p>
     <details><summary>我的工作区与个人偏好</summary><PersonalWorkspace revision={workspaceRevision} /></details>
     <section className="toolbar">
       <details><summary>高级范围（可选，仅新话题生效）</summary>

@@ -2966,6 +2966,7 @@ export function LegacyApp() {
         <Route path="/search" element={<SearchView />} />
         <Route path="/quality" element={<QualityIssuesView />} />
         <Route path="/assistant" element={<AssistantView />} />
+        <Route path="/agent" element={<AssistantView />} />
         <Route path="/settings" element={<SettingsView />} />
         <Route path="*" element={<Placeholder title="页面不存在" />} />
       </Routes>
