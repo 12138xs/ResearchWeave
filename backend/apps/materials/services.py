@@ -125,6 +125,9 @@ def _extract(version):
         total = 0
         for number, page in enumerate(reader.pages, 1):
             text = page.extract_text() or ""
+            if "\x00" in text:
+                text = text.replace("\x00", "\ufffd")
+                warnings.append(f"第 {number} 页提取结果含空字符，已用替换字符标记；请核对原文，原文件未改动。")
             total += len(text)
             if total > MAX_TEXT:
                 raise ValueError("text limit")

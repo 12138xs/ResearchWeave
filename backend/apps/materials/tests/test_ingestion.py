@@ -108,9 +108,26 @@ class IngestionTests(TestCase):
             parse_version(version.pk)
             version.refresh_from_db()
             self.assertEqual(version.status, "failed")
+
             self.assertTrue(version.error)
             self.assertEqual(version.evidence.count(), 0)
             self.assertEqual(version.task.status, "failed")
+
+    def test_pdf_nul_is_visible_and_does_not_abort_database_insert(self):
+        writer = PdfWriter()
+        writer.add_blank_page(width=100, height=100)
+        data = BytesIO()
+        writer.write(data)
+        original = data.getvalue()
+        version, _ = self.upload(original, "extracted-control.pdf")
+        with patch('pypdf._page.PageObject.extract_text', return_value='u\x00(x) = 1'):
+            parse_version(version.pk)
+        version.refresh_from_db()
+        self.assertEqual(version.status, 'needs_review')
+        self.assertEqual(version.evidence.get().text, 'u\ufffd(x) = 1')
+        self.assertTrue(version.evidence.get().review_required)
+        self.assertTrue(any('空字符' in note for note in version.warnings))
+        self.assertEqual(version.sha256, hashlib.sha256(original).hexdigest())
 
     @patch("apps.materials.tasks.parse_material.apply_async", side_effect=RuntimeError("secret broker address"))
     def test_queue_failure_is_visible_and_retryable(self, queue):
