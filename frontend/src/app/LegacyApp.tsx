@@ -24,6 +24,7 @@ import { KnowledgeSpaceMapView } from '../features/research_map/KnowledgeSpaceMa
 import type { CatalogStats, KeywordEntry, KeywordSuggestion, KnowledgeSpace } from '../features/library/types';
 import { UploadPaper } from '../features/papers/UploadPaper';
 import type { Paper, PaperDeepProfile, PaperDeepProfileListResponse, PaperMetadataCandidate, PaperMetadataForm, PaperMetadataSuggestion, PaperQaHistoryItem, PaperQaHistoryResponse, PaperQaResponse, PaperReferenceImportResponse, PaperSearchResponse } from '../features/papers/types';
+import { FeedbackView } from '../features/feedback/FeedbackView';
 import { TasksView } from '../features/tasks/TasksView';
 import type { TaskItem, TaskStatusResponse } from '../features/tasks/types';
 import type { ThemeMode } from '../shared/types';
@@ -2935,7 +2936,7 @@ export function LegacyApp() {
                       isActive || isRouteSectionActive(route.path, location.pathname) ? 'active' : undefined
                     }
                   >
-                    <span>{route.label}</span>
+                    <span className={route.path === '/feedback' ? 'feedback-nav-label' : undefined}>{route.label}</span>
                     {route.description && <small>{route.description}</small>}
                   </NavLink>
                 ))}
@@ -2985,7 +2986,8 @@ export function LegacyApp() {
         <Route path="/experiments/:id" element={<ExperimentDetailView />} />
         <Route path="/knowledge-spaces" element={<KnowledgeSpaceManager />} />
         <Route path="/knowledge-spaces/:id" element={<KnowledgeSpaceMapView />} />
-        <Route path="/tasks" element={<TasksView />} />
+        <Route path="/feedback" element={<FeedbackView />} />
+            <Route path="/tasks" element={<TasksView />} />
         <Route path="/search" element={<SearchView />} />
         <Route path="/quality" element={<QualityIssuesView />} />
         <Route path="/assistant" element={<AssistantView />} />

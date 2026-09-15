@@ -99,6 +99,7 @@ INSTALLED_APPS = [
     "apps.quality",
     "apps.research_map",
     "apps.tasks",
+    "apps.feedback",
     "apps.storage",
     "apps.materials",
     "apps.exports",
