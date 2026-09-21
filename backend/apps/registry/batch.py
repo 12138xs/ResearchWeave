@@ -1,5 +1,6 @@
-"""有界只读计划；不执行登记、审计、自动修复或历史时点重建。"""
+"""有界只读计划与显式对象审计；不执行登记、修复或历史时点重建。"""
 import re
+from uuid import UUID
 from datetime import timezone as datetime_timezone
 
 from django.contrib.auth import get_user_model
@@ -10,6 +11,7 @@ from django.utils.dateparse import parse_datetime
 from apps.documents.models import DocumentVersion
 from apps.materials.models import MaterialVersion
 from . import services
+from .models import ResearchObject
 
 # 编排协议的代码版本标识，不冒充 Git 提交或生产发布版本。
 CODE_VERSION = 'registry-plan-1'
@@ -128,3 +130,64 @@ def plan_batch(*, kind, actor_id, after_pk=0, through_pk=None, limit=20, cutoff=
         raise
     except Exception:
         raise PlanError('unexpected_error') from None
+
+
+AUDIT_CODE_VERSION = 'registry-audit-1'
+AUDIT_REASON_CODES = REJECTION_CODES | frozenset({
+    'snapshot_schema_mismatch', 'snapshot_hash_mismatch', 'fixed_content_changed',
+    'stale', 'invalid_legacy_identity', 'baseline_has_no_legacy_version',
+})
+
+
+class AuditError(ValueError):
+    def __init__(self, code):
+        self.code = code
+        super().__init__(code)
+
+
+def _audit_objects(object_ids):
+    if not isinstance(object_ids, (list, tuple)) or not 1 <= len(object_ids) <= 50:
+        raise AuditError('invalid_object_ids')
+    normalized = []
+    for value in object_ids:
+        if not isinstance(value, str) or len(value) > 45:
+            raise AuditError('invalid_object_id')
+        try:
+            normalized.append(str(UUID(value)))
+        except ValueError:
+            raise AuditError('invalid_object_id') from None
+    if len(set(normalized)) != len(normalized):
+        raise AuditError('duplicate_object_id')
+
+    items = []
+    summary = dict(requested=len(normalized), checked=0, ok=0, with_findings=0, unavailable=0, writes=0)
+    for object_id in sorted(normalized):
+        try:
+            reasons = services.check_invariants(object_id)
+        except ResearchObject.DoesNotExist:
+            reasons = ['object_unavailable']
+            status = 'unavailable'
+            summary['unavailable'] += 1
+        else:
+            if not isinstance(reasons, list) or any(
+                    not isinstance(reason, str) or reason not in AUDIT_REASON_CODES for reason in reasons):
+                raise AuditError('unexpected_error')
+            reasons = sorted(set(reasons))
+            status = 'finding' if reasons else 'ok'
+            summary['checked'] += 1
+            summary['with_findings' if reasons else 'ok'] += 1
+        items.append(dict(object_id=object_id, status=status, reasons=reasons))
+    manifest = dict(schema_version='registry-audit-v1', mode='audit',
+                    code_version=AUDIT_CODE_VERSION, items=items, summary=summary)
+    manifest['batch_id'] = services.digest(manifest)
+    return manifest
+
+
+def audit_objects(object_ids):
+    """仅检查显式对象；requested=checked+unavailable，checked=ok+with_findings。"""
+    try:
+        return _audit_objects(object_ids)
+    except AuditError:
+        raise
+    except Exception:
+        raise AuditError('unexpected_error') from None
