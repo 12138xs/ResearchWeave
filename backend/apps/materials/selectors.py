@@ -39,11 +39,13 @@ def material_data(material, user):
     }
 
 
-def get_version(user, pk, version_id, write=False, lock=False):
+def get_version(user, pk, version_id, write=False, lock=False, *, queryset=None):
     allowed = materials(user, write=write).values("pk")
-    queryset = MaterialVersion.objects.filter(material_id__in=allowed)
+    # Internal projections still pass through the same native permission filter.
+    if queryset is None:
+        queryset = MaterialVersion.objects.all()
+    queryset = queryset.filter(material_id__in=allowed)
     if lock:
         queryset = queryset.select_for_update()
     return get_object_or_404(queryset, pk=version_id, material_id=pk)
-
 

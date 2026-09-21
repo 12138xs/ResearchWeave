@@ -1,0 +1,202 @@
+{
+  "assets": [
+    {
+      "actor": "owner",
+      "evidence": [
+        {
+          "at": false,
+          "by": false,
+          "flag": false,
+          "nonempty": true
+        }
+      ],
+      "expected": {
+        "assessment": "usable",
+        "counts": {
+          "empty": 0,
+          "evidence": 1,
+          "nonempty": 1,
+          "review_required": 0,
+          "reviewed": 0
+        },
+        "review_state": "not_required"
+      },
+      "format": "md",
+      "id": "O01",
+      "issues": [],
+      "material_id": 10001,
+      "status": "ready",
+      "structure": true,
+      "version_id": 20001,
+      "warning": false
+    },
+    {
+      "actor": "owner",
+      "evidence": [
+        {
+          "at": false,
+          "by": false,
+          "flag": false,
+          "nonempty": true
+        }
+      ],
+      "expected": {
+        "assessment": "unknown",
+        "counts": {
+          "empty": 0,
+          "evidence": 1,
+          "nonempty": 1,
+          "review_required": 0,
+          "reviewed": 0
+        },
+        "review_state": "unknown"
+      },
+      "format": "md",
+      "id": "O02",
+      "issues": [
+        "unknown_processing_state"
+      ],
+      "material_id": 10002,
+      "status": "unexpected",
+      "structure": true,
+      "version_id": 20002,
+      "warning": false
+    },
+    {
+      "actor": "owner",
+      "evidence": [
+        {
+          "at": true,
+          "by": true,
+          "flag": false,
+          "nonempty": true
+        },
+        {
+          "at": true,
+          "by": true,
+          "flag": false,
+          "nonempty": false
+        }
+      ],
+      "expected": {
+        "assessment": "needs_review",
+        "counts": {
+          "empty": 1,
+          "evidence": 2,
+          "nonempty": 1,
+          "review_required": 0,
+          "reviewed": 2
+        },
+        "review_state": "unknown"
+      },
+      "format": "pdf",
+      "id": "O03",
+      "issues": [
+        "page_text_missing"
+      ],
+      "material_id": 10003,
+      "status": "ready",
+      "structure": true,
+      "version_id": 20003,
+      "warning": false
+    },
+    {
+      "actor": "owner",
+      "evidence": [
+        {
+          "at": true,
+          "by": true,
+          "flag": true,
+          "nonempty": true
+        }
+      ],
+      "expected": {
+        "assessment": "needs_review",
+        "counts": {
+          "empty": 0,
+          "evidence": 1,
+          "nonempty": 1,
+          "review_required": 1,
+          "reviewed": 1
+        },
+        "review_state": "unknown"
+      },
+      "format": "pdf",
+      "id": "O04",
+      "issues": [
+        "evidence_review_required",
+        "review_metadata_incomplete"
+      ],
+      "material_id": 10004,
+      "status": "ready",
+      "structure": true,
+      "version_id": 20004,
+      "warning": false
+    },
+    {
+      "actor": "owner",
+      "evidence": [
+        {
+          "at": false,
+          "by": false,
+          "flag": false,
+          "nonempty": true
+        }
+      ],
+      "expected": {
+        "assessment": "usable",
+        "counts": {
+          "empty": 0,
+          "evidence": 1,
+          "nonempty": 1,
+          "review_required": 0,
+          "reviewed": 0
+        },
+        "review_state": "not_required"
+      },
+      "format": "md",
+      "id": "O05",
+      "issues": [
+        "legacy_warning_present",
+        "structure_missing"
+      ],
+      "material_id": 10005,
+      "status": "ready",
+      "structure": false,
+      "version_id": 20005,
+      "warning": true
+    },
+    {
+      "actor": "other",
+      "evidence": [
+        {
+          "at": false,
+          "by": false,
+          "flag": false,
+          "nonempty": true
+        }
+      ],
+      "expected": {
+        "assessment": "usable",
+        "counts": {
+          "empty": 0,
+          "evidence": 1,
+          "nonempty": 1,
+          "review_required": 0,
+          "reviewed": 0
+        },
+        "review_state": "not_required"
+      },
+      "format": "md",
+      "id": "O06",
+      "issues": [],
+      "material_id": 10006,
+      "status": "ready",
+      "structure": true,
+      "version_id": 20006,
+      "warning": false
+    }
+  ],
+  "reviewed_at": "2026-01-01T00:00:00Z",
+  "version": "ldb-quality-assets-v1"
+}
