@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from django.http import Http404
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -24,6 +25,15 @@ class QualityIssueDetailView(generics.UpdateAPIView):
     serializer_class = QualityIssueSerializer
     def get_queryset(self):
         return quality_issue_queryset({}, user=self.request.user, write=True)
+
+    def perform_update(self, serializer):
+        issue = serializer.instance
+        # 保存前按原锚点复核；不承诺此检查与提交之间的原子撤权。
+        if not self.get_queryset().filter(
+            pk=issue.pk, object_type=issue.object_type, object_id=issue.object_id,
+        ).exists():
+            raise Http404("No QualityIssue matches the given query.")
+        serializer.save()
 
 
 class QualityAuditEnqueueView(APIView):

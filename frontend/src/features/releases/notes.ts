@@ -1,6 +1,12 @@
 // Append a truthful user-facing entry for every delivered change; newest first.
-// Only deployed history belongs here. Planned capabilities remain explicit limitations.
+// Mark undeployed changes explicitly; never imply they are available in production.
 export const releaseNotes = [
+  {
+    id: '20260921-quality-access-f1', date: '2026-09-21', title: '质量问题权限与目标校验修复（未部署）',
+    reference: 'LDB-2D-F1 · quality-access-f1',
+    changes: ['质量列表及更新仅接受仍存在的论文、知识文档和实验项目，并遵循各自原生读写权限。', '未知类型、别名和已删除目标的问题记录保留，但不再通过普通质量入口显示或更新。', '更新保存前再次检查目标及写权限，保留合法旧操作与响应格式。'],
+    limitations: ['分支验证通过，尚未部署。', '最后一次权限检查与提交之间仍存在非原子窗口；本次未修改质量内容脱敏、重复问题、状态语义或研究地图计数。']
+  },
   {
     id: '20260915-feedback-layout', date: '2026-09-15', title: '固定意见箱布局，新增版本说明',
     reference: '随本页面发布',
