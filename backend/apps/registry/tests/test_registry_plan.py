@@ -70,7 +70,9 @@ class RegistryPlanTests(TestCase):
         for kind, row in self.rows.items():
             with self.subTest(kind=kind):
                 result = self.plan(kind)
-                self.assertEqual(result['schema_version'], 'registry-plan-v1')
+                self.assertEqual(result['schema_version'], 'registry-plan-v2')
+                self.assertEqual(result['code_version'], 'registry-plan-2')
+                self.assertEqual(len(result['target_fingerprint']), 64)
                 self.assertEqual(result['mode'], 'dry-run')
                 self.assertEqual(result['summary'], {'scanned': 1, 'planned': 1, 'rejected': 0, 'created': 0})
                 item = result['items'][0]
