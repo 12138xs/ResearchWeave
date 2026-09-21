@@ -170,7 +170,9 @@ class RegistryAuditTests(TestCase):
                 self.assertEqual(self.command(ids, code), self.command(ids, code))
                 self.assertEqual(self.tables(), before)
 
-    def test_cli_exit_codes_and_parser_redaction(self):
+    @patch('django.core.management.base.connections.close_all')
+    def test_cli_exit_codes_and_parser_redaction(self, close_all):
+        # CLI 结束清理不能关闭 TestCase 借用的外层事务；仍真实执行 parser/handle。
         from apps.registry.management.commands.registry_audit import Command
         for ids, expected in [([str(self.obj.pk)], 0), ([str(uuid.uuid4())], 3), (['PRIVATE_SENTINEL'], 2)]:
             out, err = io.StringIO(), io.StringIO()
@@ -193,3 +195,5 @@ class RegistryAuditTests(TestCase):
                 Command().run_from_argv(['manage.py', 'registry_audit', *argv])
             self.assertEqual(caught.exception.code, 2)
             self.assertNotIn('PRIVATE_SENTINEL', err.getvalue())
+        self.assertEqual(close_all.call_count, 4)
+        self.assertTrue(ResearchObject.objects.filter(pk=self.obj.pk).exists())

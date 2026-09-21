@@ -216,7 +216,9 @@ class RegistryPlanTests(TestCase):
             self.assertNotIn('PRIVATE_SENTINEL', stderr.getvalue())
             self.assertIn('invalid_arguments', stderr.getvalue())
 
-    def test_actual_command_entrypoint_success_and_failure(self):
+    @patch('django.core.management.base.connections.close_all')
+    def test_actual_command_entrypoint_success_and_failure(self, close_all):
+        # 保留 CLI 路径，只隔离进程退出时对 TestCase 外层事务的连接清理。
         from apps.registry.management.commands.registry_plan import Command
         out, err = io.StringIO(), io.StringIO()
         Command(stdout=out, stderr=err).run_from_argv([
@@ -233,6 +235,8 @@ class RegistryPlanTests(TestCase):
         self.assertEqual(caught.exception.code, 2)
         self.assertEqual(out.getvalue(), '')
         self.assertEqual(err.getvalue(), 'CommandError: unexpected_error\n')
+        self.assertEqual(close_all.call_count, 2)
+        self.assertTrue(Paper.objects.filter(pk=self.paper.pk).exists())
 
     def test_empty_source_and_hard_page_size(self):
         Paper.objects.all().delete()
