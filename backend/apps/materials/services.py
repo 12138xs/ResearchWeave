@@ -200,20 +200,39 @@ def retry_version(user, pk, version_id):
     return 202, "已申请重新解析。"
 
 
+def _review_collection_complete(version):
+    for text, required, reviewer, reviewed_at in version.evidence.values_list(
+        "text", "review_required", "reviewed_by_id", "reviewed_at"
+    ):
+        if required or (reviewer is None) != (reviewed_at is None):
+            return False
+        if version.format == "pdf" and (not text.strip() or reviewer is None or reviewed_at is None):
+            return False
+    return True
+
+
 def review_evidence(user, pk, version_id, evidence_id, confirmed):
     if confirmed is not True:
         raise ValidationError("请明确确认已对照原文核对文字与公式。")
     with transaction.atomic():
         version = get_version(user, pk, version_id, write=True, lock=True)
         evidence = get_object_or_404(version.evidence, pk=evidence_id)
+        if version.status not in {"ready", "needs_review"}:
+            raise ValidationError("该版本尚未成功完成解析，不能记录核对结果；请先查看解析状态。")
         if not evidence.text.strip():
             raise ValidationError("此页没有可用文字，不能标为已核对可用；请补充整理后的 Markdown 版本。")
+        has_reviewer = evidence.reviewed_by_id is not None
+        has_review_time = evidence.reviewed_at is not None
+        if has_reviewer != has_review_time or (evidence.review_required and has_reviewer and has_review_time):
+            raise ValidationError("该条证据的核对记录不一致，本次未保存；请联系有权限的维护者核查。")
+        if version.status == "ready" and not _review_collection_complete(version):
+            raise ValidationError("该版本的证据集合存在不一致，本次未保存核对结果；请先核查已有记录。")
         if evidence.reviewed_at is None:
             evidence.review_required = False
             evidence.reviewed_by = user
             evidence.reviewed_at = timezone.now()
             evidence.save(update_fields=["review_required", "reviewed_by", "reviewed_at"])
-        if not version.evidence.filter(review_required=True).exists():
+        if version.status == "ready" or _review_collection_complete(version):
             version.status = "ready"
             version.save(update_fields=["status", "updated_at"])
 
