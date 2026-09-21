@@ -1,191 +1,1179 @@
 {
   "assets": [
     {
-      "actor": "owner",
-      "evidence": [
+      "cases": [
         {
-          "at": false,
-          "by": false,
-          "flag": false,
-          "nonempty": true
+          "effective_completed_ordinals": [],
+          "evidence": [
+            {
+              "at": false,
+              "by": false,
+              "flag": false,
+              "nonempty": true,
+              "ordinal": 1
+            }
+          ],
+          "expected": {
+            "assessment": "usable",
+            "issues": [],
+            "review_state": "not_required"
+          },
+          "fixture_version": "ldb-quality-assets-v2",
+          "format": "md",
+          "id": "markdown-no-review",
+          "material_id": 10001,
+          "object_exists": true,
+          "permission": {
+            "actor": "owner",
+            "allowed": true,
+            "visibility": "private"
+          },
+          "raw_counts": {
+            "empty": 0,
+            "evidence": 1,
+            "nonempty": 1,
+            "review_required": 0,
+            "reviewed": 0
+          },
+          "sensitive_sha256": "f30a86cf672334799e7c0a7061d86aa36467d705d557d41b93252a6f9392b814",
+          "status": "ready",
+          "structure": true,
+          "version_id": 20001,
+          "warning": false
         }
       ],
-      "expected": {
-        "assessment": "usable",
-        "counts": {
-          "empty": 0,
-          "evidence": 1,
-          "nonempty": 1,
-          "review_required": 0,
-          "reviewed": 0
-        },
-        "review_state": "not_required"
-      },
-      "format": "md",
-      "id": "O01",
-      "issues": [],
-      "material_id": 10001,
-      "status": "ready",
-      "structure": true,
-      "version_id": 20001,
-      "warning": false
+      "id": "O01"
     },
     {
-      "actor": "owner",
-      "evidence": [
+      "cases": [
         {
-          "at": false,
-          "by": false,
-          "flag": false,
-          "nonempty": true
+          "effective_completed_ordinals": [],
+          "evidence": [
+            {
+              "at": false,
+              "by": false,
+              "flag": false,
+              "nonempty": true,
+              "ordinal": 1
+            }
+          ],
+          "expected": {
+            "assessment": "pending",
+            "issues": [],
+            "review_state": "unknown"
+          },
+          "fixture_version": "ldb-quality-assets-v2",
+          "format": "md",
+          "id": "queued",
+          "material_id": 10002,
+          "object_exists": true,
+          "permission": {
+            "actor": "owner",
+            "allowed": true,
+            "visibility": "private"
+          },
+          "raw_counts": {
+            "empty": 0,
+            "evidence": 1,
+            "nonempty": 1,
+            "review_required": 0,
+            "reviewed": 0
+          },
+          "sensitive_sha256": "f30a86cf672334799e7c0a7061d86aa36467d705d557d41b93252a6f9392b814",
+          "status": "queued",
+          "structure": true,
+          "version_id": 20002,
+          "warning": false
+        },
+        {
+          "effective_completed_ordinals": [],
+          "evidence": [
+            {
+              "at": false,
+              "by": false,
+              "flag": false,
+              "nonempty": true,
+              "ordinal": 1
+            }
+          ],
+          "expected": {
+            "assessment": "pending",
+            "issues": [],
+            "review_state": "unknown"
+          },
+          "fixture_version": "ldb-quality-assets-v2",
+          "format": "md",
+          "id": "processing",
+          "material_id": 10003,
+          "object_exists": true,
+          "permission": {
+            "actor": "owner",
+            "allowed": true,
+            "visibility": "private"
+          },
+          "raw_counts": {
+            "empty": 0,
+            "evidence": 1,
+            "nonempty": 1,
+            "review_required": 0,
+            "reviewed": 0
+          },
+          "sensitive_sha256": "f30a86cf672334799e7c0a7061d86aa36467d705d557d41b93252a6f9392b814",
+          "status": "processing",
+          "structure": true,
+          "version_id": 20003,
+          "warning": false
+        },
+        {
+          "effective_completed_ordinals": [],
+          "evidence": [
+            {
+              "at": false,
+              "by": false,
+              "flag": false,
+              "nonempty": true,
+              "ordinal": 1
+            }
+          ],
+          "expected": {
+            "assessment": "blocked",
+            "issues": [
+              "parse_failed"
+            ],
+            "review_state": "unknown"
+          },
+          "fixture_version": "ldb-quality-assets-v2",
+          "format": "md",
+          "id": "failed",
+          "material_id": 10004,
+          "object_exists": true,
+          "permission": {
+            "actor": "owner",
+            "allowed": true,
+            "visibility": "private"
+          },
+          "raw_counts": {
+            "empty": 0,
+            "evidence": 1,
+            "nonempty": 1,
+            "review_required": 0,
+            "reviewed": 0
+          },
+          "sensitive_sha256": "f30a86cf672334799e7c0a7061d86aa36467d705d557d41b93252a6f9392b814",
+          "status": "failed",
+          "structure": true,
+          "version_id": 20004,
+          "warning": false
+        },
+        {
+          "effective_completed_ordinals": [],
+          "evidence": [
+            {
+              "at": false,
+              "by": false,
+              "flag": false,
+              "nonempty": true,
+              "ordinal": 1
+            }
+          ],
+          "expected": {
+            "assessment": "unknown",
+            "issues": [
+              "unknown_processing_state"
+            ],
+            "review_state": "unknown"
+          },
+          "fixture_version": "ldb-quality-assets-v2",
+          "format": "md",
+          "id": "unexpected",
+          "material_id": 10005,
+          "object_exists": true,
+          "permission": {
+            "actor": "owner",
+            "allowed": true,
+            "visibility": "private"
+          },
+          "raw_counts": {
+            "empty": 0,
+            "evidence": 1,
+            "nonempty": 1,
+            "review_required": 0,
+            "reviewed": 0
+          },
+          "sensitive_sha256": "f30a86cf672334799e7c0a7061d86aa36467d705d557d41b93252a6f9392b814",
+          "status": "unexpected",
+          "structure": true,
+          "version_id": 20005,
+          "warning": false
         }
       ],
-      "expected": {
-        "assessment": "unknown",
-        "counts": {
-          "empty": 0,
-          "evidence": 1,
-          "nonempty": 1,
-          "review_required": 0,
-          "reviewed": 0
-        },
-        "review_state": "unknown"
-      },
-      "format": "md",
-      "id": "O02",
-      "issues": [
-        "unknown_processing_state"
-      ],
-      "material_id": 10002,
-      "status": "unexpected",
-      "structure": true,
-      "version_id": 20002,
-      "warning": false
+      "id": "O02"
     },
     {
-      "actor": "owner",
-      "evidence": [
+      "cases": [
         {
-          "at": true,
-          "by": true,
-          "flag": false,
-          "nonempty": true
+          "effective_completed_ordinals": [],
+          "evidence": [],
+          "expected": {
+            "assessment": "blocked",
+            "issues": [
+              "no_evidence"
+            ],
+            "review_state": "unknown"
+          },
+          "fixture_version": "ldb-quality-assets-v2",
+          "format": "pdf",
+          "id": "ready-zero",
+          "material_id": 10006,
+          "object_exists": true,
+          "permission": {
+            "actor": "owner",
+            "allowed": true,
+            "visibility": "private"
+          },
+          "raw_counts": {
+            "empty": 0,
+            "evidence": 0,
+            "nonempty": 0,
+            "review_required": 0,
+            "reviewed": 0
+          },
+          "sensitive_sha256": "f30a86cf672334799e7c0a7061d86aa36467d705d557d41b93252a6f9392b814",
+          "status": "ready",
+          "structure": true,
+          "version_id": 20006,
+          "warning": false
         },
         {
-          "at": true,
-          "by": true,
-          "flag": false,
-          "nonempty": false
+          "effective_completed_ordinals": [],
+          "evidence": [
+            {
+              "at": true,
+              "by": true,
+              "flag": false,
+              "nonempty": false,
+              "ordinal": 1
+            },
+            {
+              "at": true,
+              "by": true,
+              "flag": false,
+              "nonempty": false,
+              "ordinal": 2
+            }
+          ],
+          "expected": {
+            "assessment": "blocked",
+            "issues": [
+              "no_text",
+              "page_text_missing"
+            ],
+            "review_state": "unknown"
+          },
+          "fixture_version": "ldb-quality-assets-v2",
+          "format": "pdf",
+          "id": "ready-all-empty",
+          "material_id": 10007,
+          "object_exists": true,
+          "permission": {
+            "actor": "owner",
+            "allowed": true,
+            "visibility": "private"
+          },
+          "raw_counts": {
+            "empty": 2,
+            "evidence": 2,
+            "nonempty": 0,
+            "review_required": 0,
+            "reviewed": 2
+          },
+          "sensitive_sha256": "f30a86cf672334799e7c0a7061d86aa36467d705d557d41b93252a6f9392b814",
+          "status": "ready",
+          "structure": true,
+          "version_id": 20007,
+          "warning": false
+        },
+        {
+          "effective_completed_ordinals": [
+            1
+          ],
+          "evidence": [
+            {
+              "at": true,
+              "by": true,
+              "flag": false,
+              "nonempty": true,
+              "ordinal": 1
+            },
+            {
+              "at": true,
+              "by": true,
+              "flag": false,
+              "nonempty": false,
+              "ordinal": 2
+            }
+          ],
+          "expected": {
+            "assessment": "needs_review",
+            "issues": [
+              "page_text_missing"
+            ],
+            "review_state": "unknown"
+          },
+          "fixture_version": "ldb-quality-assets-v2",
+          "format": "pdf",
+          "id": "ready-mixed",
+          "material_id": 10008,
+          "object_exists": true,
+          "permission": {
+            "actor": "owner",
+            "allowed": true,
+            "visibility": "private"
+          },
+          "raw_counts": {
+            "empty": 1,
+            "evidence": 2,
+            "nonempty": 1,
+            "review_required": 0,
+            "reviewed": 2
+          },
+          "sensitive_sha256": "f30a86cf672334799e7c0a7061d86aa36467d705d557d41b93252a6f9392b814",
+          "status": "ready",
+          "structure": true,
+          "version_id": 20008,
+          "warning": false
+        },
+        {
+          "effective_completed_ordinals": [],
+          "evidence": [],
+          "expected": {
+            "assessment": "blocked",
+            "issues": [
+              "legacy_status_needs_review",
+              "no_evidence"
+            ],
+            "review_state": "unknown"
+          },
+          "fixture_version": "ldb-quality-assets-v2",
+          "format": "pdf",
+          "id": "needs_review-zero",
+          "material_id": 10009,
+          "object_exists": true,
+          "permission": {
+            "actor": "owner",
+            "allowed": true,
+            "visibility": "private"
+          },
+          "raw_counts": {
+            "empty": 0,
+            "evidence": 0,
+            "nonempty": 0,
+            "review_required": 0,
+            "reviewed": 0
+          },
+          "sensitive_sha256": "f30a86cf672334799e7c0a7061d86aa36467d705d557d41b93252a6f9392b814",
+          "status": "needs_review",
+          "structure": true,
+          "version_id": 20009,
+          "warning": false
+        },
+        {
+          "effective_completed_ordinals": [],
+          "evidence": [
+            {
+              "at": true,
+              "by": true,
+              "flag": false,
+              "nonempty": false,
+              "ordinal": 1
+            },
+            {
+              "at": true,
+              "by": true,
+              "flag": false,
+              "nonempty": false,
+              "ordinal": 2
+            }
+          ],
+          "expected": {
+            "assessment": "blocked",
+            "issues": [
+              "legacy_status_needs_review",
+              "no_text",
+              "page_text_missing"
+            ],
+            "review_state": "unknown"
+          },
+          "fixture_version": "ldb-quality-assets-v2",
+          "format": "pdf",
+          "id": "needs_review-all-empty",
+          "material_id": 10010,
+          "object_exists": true,
+          "permission": {
+            "actor": "owner",
+            "allowed": true,
+            "visibility": "private"
+          },
+          "raw_counts": {
+            "empty": 2,
+            "evidence": 2,
+            "nonempty": 0,
+            "review_required": 0,
+            "reviewed": 2
+          },
+          "sensitive_sha256": "f30a86cf672334799e7c0a7061d86aa36467d705d557d41b93252a6f9392b814",
+          "status": "needs_review",
+          "structure": true,
+          "version_id": 20010,
+          "warning": false
+        },
+        {
+          "effective_completed_ordinals": [
+            1
+          ],
+          "evidence": [
+            {
+              "at": true,
+              "by": true,
+              "flag": false,
+              "nonempty": true,
+              "ordinal": 1
+            },
+            {
+              "at": true,
+              "by": true,
+              "flag": false,
+              "nonempty": false,
+              "ordinal": 2
+            }
+          ],
+          "expected": {
+            "assessment": "needs_review",
+            "issues": [
+              "legacy_status_needs_review",
+              "page_text_missing"
+            ],
+            "review_state": "unknown"
+          },
+          "fixture_version": "ldb-quality-assets-v2",
+          "format": "pdf",
+          "id": "needs_review-mixed",
+          "material_id": 10011,
+          "object_exists": true,
+          "permission": {
+            "actor": "owner",
+            "allowed": true,
+            "visibility": "private"
+          },
+          "raw_counts": {
+            "empty": 1,
+            "evidence": 2,
+            "nonempty": 1,
+            "review_required": 0,
+            "reviewed": 2
+          },
+          "sensitive_sha256": "f30a86cf672334799e7c0a7061d86aa36467d705d557d41b93252a6f9392b814",
+          "status": "needs_review",
+          "structure": true,
+          "version_id": 20011,
+          "warning": false
         }
       ],
-      "expected": {
-        "assessment": "needs_review",
-        "counts": {
-          "empty": 1,
-          "evidence": 2,
-          "nonempty": 1,
-          "review_required": 0,
-          "reviewed": 2
-        },
-        "review_state": "unknown"
-      },
-      "format": "pdf",
-      "id": "O03",
-      "issues": [
-        "page_text_missing"
-      ],
-      "material_id": 10003,
-      "status": "ready",
-      "structure": true,
-      "version_id": 20003,
-      "warning": false
+      "id": "O03"
     },
     {
-      "actor": "owner",
-      "evidence": [
+      "cases": [
         {
-          "at": true,
-          "by": true,
-          "flag": true,
-          "nonempty": true
+          "effective_completed_ordinals": [],
+          "evidence": [
+            {
+              "at": false,
+              "by": false,
+              "flag": true,
+              "nonempty": true,
+              "ordinal": 1
+            },
+            {
+              "at": false,
+              "by": false,
+              "flag": true,
+              "nonempty": true,
+              "ordinal": 2
+            }
+          ],
+          "expected": {
+            "assessment": "needs_review",
+            "issues": [
+              "evidence_review_required"
+            ],
+            "review_state": "unreviewed"
+          },
+          "fixture_version": "ldb-quality-assets-v2",
+          "format": "pdf",
+          "id": "unreviewed",
+          "material_id": 10012,
+          "object_exists": true,
+          "permission": {
+            "actor": "owner",
+            "allowed": true,
+            "visibility": "private"
+          },
+          "raw_counts": {
+            "empty": 0,
+            "evidence": 2,
+            "nonempty": 2,
+            "review_required": 2,
+            "reviewed": 0
+          },
+          "sensitive_sha256": "f30a86cf672334799e7c0a7061d86aa36467d705d557d41b93252a6f9392b814",
+          "status": "ready",
+          "structure": true,
+          "version_id": 20012,
+          "warning": false
+        },
+        {
+          "effective_completed_ordinals": [
+            1
+          ],
+          "evidence": [
+            {
+              "at": true,
+              "by": true,
+              "flag": false,
+              "nonempty": true,
+              "ordinal": 1
+            },
+            {
+              "at": false,
+              "by": false,
+              "flag": true,
+              "nonempty": true,
+              "ordinal": 2
+            }
+          ],
+          "expected": {
+            "assessment": "needs_review",
+            "issues": [
+              "evidence_review_required"
+            ],
+            "review_state": "partial"
+          },
+          "fixture_version": "ldb-quality-assets-v2",
+          "format": "pdf",
+          "id": "partial",
+          "material_id": 10013,
+          "object_exists": true,
+          "permission": {
+            "actor": "owner",
+            "allowed": true,
+            "visibility": "private"
+          },
+          "raw_counts": {
+            "empty": 0,
+            "evidence": 2,
+            "nonempty": 2,
+            "review_required": 1,
+            "reviewed": 1
+          },
+          "sensitive_sha256": "f30a86cf672334799e7c0a7061d86aa36467d705d557d41b93252a6f9392b814",
+          "status": "ready",
+          "structure": true,
+          "version_id": 20013,
+          "warning": false
+        },
+        {
+          "effective_completed_ordinals": [
+            1,
+            2
+          ],
+          "evidence": [
+            {
+              "at": true,
+              "by": true,
+              "flag": false,
+              "nonempty": true,
+              "ordinal": 1
+            },
+            {
+              "at": true,
+              "by": true,
+              "flag": false,
+              "nonempty": true,
+              "ordinal": 2
+            }
+          ],
+          "expected": {
+            "assessment": "usable",
+            "issues": [],
+            "review_state": "complete"
+          },
+          "fixture_version": "ldb-quality-assets-v2",
+          "format": "pdf",
+          "id": "complete",
+          "material_id": 10014,
+          "object_exists": true,
+          "permission": {
+            "actor": "owner",
+            "allowed": true,
+            "visibility": "private"
+          },
+          "raw_counts": {
+            "empty": 0,
+            "evidence": 2,
+            "nonempty": 2,
+            "review_required": 0,
+            "reviewed": 2
+          },
+          "sensitive_sha256": "f30a86cf672334799e7c0a7061d86aa36467d705d557d41b93252a6f9392b814",
+          "status": "ready",
+          "structure": true,
+          "version_id": 20014,
+          "warning": false
+        },
+        {
+          "effective_completed_ordinals": [
+            1
+          ],
+          "evidence": [
+            {
+              "at": true,
+              "by": true,
+              "flag": false,
+              "nonempty": true,
+              "ordinal": 1
+            }
+          ],
+          "expected": {
+            "assessment": "needs_review",
+            "issues": [
+              "legacy_status_needs_review"
+            ],
+            "review_state": "complete"
+          },
+          "fixture_version": "ldb-quality-assets-v2",
+          "format": "pdf",
+          "id": "complete-legacy-status",
+          "material_id": 10015,
+          "object_exists": true,
+          "permission": {
+            "actor": "owner",
+            "allowed": true,
+            "visibility": "private"
+          },
+          "raw_counts": {
+            "empty": 0,
+            "evidence": 1,
+            "nonempty": 1,
+            "review_required": 0,
+            "reviewed": 1
+          },
+          "sensitive_sha256": "f30a86cf672334799e7c0a7061d86aa36467d705d557d41b93252a6f9392b814",
+          "status": "needs_review",
+          "structure": true,
+          "version_id": 20015,
+          "warning": false
+        },
+        {
+          "effective_completed_ordinals": [],
+          "evidence": [
+            {
+              "at": false,
+              "by": false,
+              "flag": false,
+              "nonempty": true,
+              "ordinal": 1
+            }
+          ],
+          "expected": {
+            "assessment": "needs_review",
+            "issues": [
+              "review_metadata_incomplete"
+            ],
+            "review_state": "unknown"
+          },
+          "fixture_version": "ldb-quality-assets-v2",
+          "format": "pdf",
+          "id": "flag-0-by-0-at-0",
+          "material_id": 10016,
+          "object_exists": true,
+          "permission": {
+            "actor": "owner",
+            "allowed": true,
+            "visibility": "private"
+          },
+          "raw_counts": {
+            "empty": 0,
+            "evidence": 1,
+            "nonempty": 1,
+            "review_required": 0,
+            "reviewed": 0
+          },
+          "sensitive_sha256": "f30a86cf672334799e7c0a7061d86aa36467d705d557d41b93252a6f9392b814",
+          "status": "ready",
+          "structure": true,
+          "version_id": 20016,
+          "warning": false
+        },
+        {
+          "effective_completed_ordinals": [],
+          "evidence": [
+            {
+              "at": false,
+              "by": true,
+              "flag": false,
+              "nonempty": true,
+              "ordinal": 1
+            }
+          ],
+          "expected": {
+            "assessment": "needs_review",
+            "issues": [
+              "review_metadata_incomplete"
+            ],
+            "review_state": "unknown"
+          },
+          "fixture_version": "ldb-quality-assets-v2",
+          "format": "pdf",
+          "id": "flag-0-by-1-at-0",
+          "material_id": 10017,
+          "object_exists": true,
+          "permission": {
+            "actor": "owner",
+            "allowed": true,
+            "visibility": "private"
+          },
+          "raw_counts": {
+            "empty": 0,
+            "evidence": 1,
+            "nonempty": 1,
+            "review_required": 0,
+            "reviewed": 0
+          },
+          "sensitive_sha256": "f30a86cf672334799e7c0a7061d86aa36467d705d557d41b93252a6f9392b814",
+          "status": "ready",
+          "structure": true,
+          "version_id": 20017,
+          "warning": false
+        },
+        {
+          "effective_completed_ordinals": [],
+          "evidence": [
+            {
+              "at": true,
+              "by": false,
+              "flag": false,
+              "nonempty": true,
+              "ordinal": 1
+            }
+          ],
+          "expected": {
+            "assessment": "needs_review",
+            "issues": [
+              "review_metadata_incomplete"
+            ],
+            "review_state": "unknown"
+          },
+          "fixture_version": "ldb-quality-assets-v2",
+          "format": "pdf",
+          "id": "flag-0-by-0-at-1",
+          "material_id": 10018,
+          "object_exists": true,
+          "permission": {
+            "actor": "owner",
+            "allowed": true,
+            "visibility": "private"
+          },
+          "raw_counts": {
+            "empty": 0,
+            "evidence": 1,
+            "nonempty": 1,
+            "review_required": 0,
+            "reviewed": 0
+          },
+          "sensitive_sha256": "f30a86cf672334799e7c0a7061d86aa36467d705d557d41b93252a6f9392b814",
+          "status": "ready",
+          "structure": true,
+          "version_id": 20018,
+          "warning": false
+        },
+        {
+          "effective_completed_ordinals": [
+            1
+          ],
+          "evidence": [
+            {
+              "at": true,
+              "by": true,
+              "flag": false,
+              "nonempty": true,
+              "ordinal": 1
+            }
+          ],
+          "expected": {
+            "assessment": "usable",
+            "issues": [],
+            "review_state": "complete"
+          },
+          "fixture_version": "ldb-quality-assets-v2",
+          "format": "pdf",
+          "id": "flag-0-by-1-at-1",
+          "material_id": 10019,
+          "object_exists": true,
+          "permission": {
+            "actor": "owner",
+            "allowed": true,
+            "visibility": "private"
+          },
+          "raw_counts": {
+            "empty": 0,
+            "evidence": 1,
+            "nonempty": 1,
+            "review_required": 0,
+            "reviewed": 1
+          },
+          "sensitive_sha256": "f30a86cf672334799e7c0a7061d86aa36467d705d557d41b93252a6f9392b814",
+          "status": "ready",
+          "structure": true,
+          "version_id": 20019,
+          "warning": false
+        },
+        {
+          "effective_completed_ordinals": [],
+          "evidence": [
+            {
+              "at": false,
+              "by": false,
+              "flag": true,
+              "nonempty": true,
+              "ordinal": 1
+            }
+          ],
+          "expected": {
+            "assessment": "needs_review",
+            "issues": [
+              "evidence_review_required"
+            ],
+            "review_state": "unreviewed"
+          },
+          "fixture_version": "ldb-quality-assets-v2",
+          "format": "pdf",
+          "id": "flag-1-by-0-at-0",
+          "material_id": 10020,
+          "object_exists": true,
+          "permission": {
+            "actor": "owner",
+            "allowed": true,
+            "visibility": "private"
+          },
+          "raw_counts": {
+            "empty": 0,
+            "evidence": 1,
+            "nonempty": 1,
+            "review_required": 1,
+            "reviewed": 0
+          },
+          "sensitive_sha256": "f30a86cf672334799e7c0a7061d86aa36467d705d557d41b93252a6f9392b814",
+          "status": "ready",
+          "structure": true,
+          "version_id": 20020,
+          "warning": false
+        },
+        {
+          "effective_completed_ordinals": [],
+          "evidence": [
+            {
+              "at": false,
+              "by": true,
+              "flag": true,
+              "nonempty": true,
+              "ordinal": 1
+            }
+          ],
+          "expected": {
+            "assessment": "needs_review",
+            "issues": [
+              "evidence_review_required",
+              "review_metadata_incomplete"
+            ],
+            "review_state": "unknown"
+          },
+          "fixture_version": "ldb-quality-assets-v2",
+          "format": "pdf",
+          "id": "flag-1-by-1-at-0",
+          "material_id": 10021,
+          "object_exists": true,
+          "permission": {
+            "actor": "owner",
+            "allowed": true,
+            "visibility": "private"
+          },
+          "raw_counts": {
+            "empty": 0,
+            "evidence": 1,
+            "nonempty": 1,
+            "review_required": 1,
+            "reviewed": 0
+          },
+          "sensitive_sha256": "f30a86cf672334799e7c0a7061d86aa36467d705d557d41b93252a6f9392b814",
+          "status": "ready",
+          "structure": true,
+          "version_id": 20021,
+          "warning": false
+        },
+        {
+          "effective_completed_ordinals": [],
+          "evidence": [
+            {
+              "at": true,
+              "by": false,
+              "flag": true,
+              "nonempty": true,
+              "ordinal": 1
+            }
+          ],
+          "expected": {
+            "assessment": "needs_review",
+            "issues": [
+              "evidence_review_required",
+              "review_metadata_incomplete"
+            ],
+            "review_state": "unknown"
+          },
+          "fixture_version": "ldb-quality-assets-v2",
+          "format": "pdf",
+          "id": "flag-1-by-0-at-1",
+          "material_id": 10022,
+          "object_exists": true,
+          "permission": {
+            "actor": "owner",
+            "allowed": true,
+            "visibility": "private"
+          },
+          "raw_counts": {
+            "empty": 0,
+            "evidence": 1,
+            "nonempty": 1,
+            "review_required": 1,
+            "reviewed": 0
+          },
+          "sensitive_sha256": "f30a86cf672334799e7c0a7061d86aa36467d705d557d41b93252a6f9392b814",
+          "status": "ready",
+          "structure": true,
+          "version_id": 20022,
+          "warning": false
+        },
+        {
+          "effective_completed_ordinals": [],
+          "evidence": [
+            {
+              "at": true,
+              "by": true,
+              "flag": true,
+              "nonempty": true,
+              "ordinal": 1
+            }
+          ],
+          "expected": {
+            "assessment": "needs_review",
+            "issues": [
+              "evidence_review_required",
+              "review_metadata_incomplete"
+            ],
+            "review_state": "unknown"
+          },
+          "fixture_version": "ldb-quality-assets-v2",
+          "format": "pdf",
+          "id": "flag-1-by-1-at-1",
+          "material_id": 10023,
+          "object_exists": true,
+          "permission": {
+            "actor": "owner",
+            "allowed": true,
+            "visibility": "private"
+          },
+          "raw_counts": {
+            "empty": 0,
+            "evidence": 1,
+            "nonempty": 1,
+            "review_required": 1,
+            "reviewed": 1
+          },
+          "sensitive_sha256": "f30a86cf672334799e7c0a7061d86aa36467d705d557d41b93252a6f9392b814",
+          "status": "ready",
+          "structure": true,
+          "version_id": 20023,
+          "warning": false
+        },
+        {
+          "effective_completed_ordinals": [
+            1
+          ],
+          "evidence": [
+            {
+              "at": true,
+              "by": true,
+              "flag": false,
+              "nonempty": true,
+              "ordinal": 1
+            },
+            {
+              "at": false,
+              "by": false,
+              "flag": true,
+              "nonempty": true,
+              "ordinal": 2
+            },
+            {
+              "at": true,
+              "by": true,
+              "flag": true,
+              "nonempty": true,
+              "ordinal": 3
+            }
+          ],
+          "expected": {
+            "assessment": "needs_review",
+            "issues": [
+              "evidence_review_required",
+              "review_metadata_incomplete"
+            ],
+            "review_state": "unknown"
+          },
+          "fixture_version": "ldb-quality-assets-v2",
+          "format": "pdf",
+          "id": "overlapping-raw-counts",
+          "material_id": 10024,
+          "object_exists": true,
+          "permission": {
+            "actor": "owner",
+            "allowed": true,
+            "visibility": "private"
+          },
+          "raw_counts": {
+            "empty": 0,
+            "evidence": 3,
+            "nonempty": 3,
+            "review_required": 2,
+            "reviewed": 2
+          },
+          "sensitive_sha256": "f30a86cf672334799e7c0a7061d86aa36467d705d557d41b93252a6f9392b814",
+          "status": "ready",
+          "structure": true,
+          "version_id": 20024,
+          "warning": false
         }
       ],
-      "expected": {
-        "assessment": "needs_review",
-        "counts": {
-          "empty": 0,
-          "evidence": 1,
-          "nonempty": 1,
-          "review_required": 1,
-          "reviewed": 1
-        },
-        "review_state": "unknown"
-      },
-      "format": "pdf",
-      "id": "O04",
-      "issues": [
-        "evidence_review_required",
-        "review_metadata_incomplete"
-      ],
-      "material_id": 10004,
-      "status": "ready",
-      "structure": true,
-      "version_id": 20004,
-      "warning": false
+      "id": "O04"
     },
     {
-      "actor": "owner",
-      "evidence": [
+      "cases": [
         {
-          "at": false,
-          "by": false,
-          "flag": false,
-          "nonempty": true
+          "effective_completed_ordinals": [],
+          "evidence": [
+            {
+              "at": false,
+              "by": false,
+              "flag": false,
+              "nonempty": true,
+              "ordinal": 1
+            }
+          ],
+          "expected": {
+            "assessment": "usable",
+            "issues": [
+              "legacy_warning_present",
+              "structure_missing"
+            ],
+            "review_state": "not_required"
+          },
+          "fixture_version": "ldb-quality-assets-v2",
+          "format": "md",
+          "id": "advisory-sensitive",
+          "material_id": 10025,
+          "object_exists": true,
+          "permission": {
+            "actor": "owner",
+            "allowed": true,
+            "visibility": "private"
+          },
+          "raw_counts": {
+            "empty": 0,
+            "evidence": 1,
+            "nonempty": 1,
+            "review_required": 0,
+            "reviewed": 0
+          },
+          "sensitive_sha256": "f30a86cf672334799e7c0a7061d86aa36467d705d557d41b93252a6f9392b814",
+          "status": "ready",
+          "structure": false,
+          "version_id": 20025,
+          "warning": true
         }
       ],
-      "expected": {
-        "assessment": "usable",
-        "counts": {
-          "empty": 0,
-          "evidence": 1,
-          "nonempty": 1,
-          "review_required": 0,
-          "reviewed": 0
-        },
-        "review_state": "not_required"
-      },
-      "format": "md",
-      "id": "O05",
-      "issues": [
-        "legacy_warning_present",
-        "structure_missing"
-      ],
-      "material_id": 10005,
-      "status": "ready",
-      "structure": false,
-      "version_id": 20005,
-      "warning": true
+      "id": "O05"
     },
     {
-      "actor": "other",
-      "evidence": [
+      "cases": [
         {
-          "at": false,
-          "by": false,
-          "flag": false,
-          "nonempty": true
+          "effective_completed_ordinals": [],
+          "evidence": [
+            {
+              "at": false,
+              "by": false,
+              "flag": false,
+              "nonempty": true,
+              "ordinal": 1
+            }
+          ],
+          "expected_error": "object_unavailable",
+          "fixture_version": "ldb-quality-assets-v2",
+          "format": "md",
+          "id": "private-denied",
+          "material_id": 10026,
+          "object_exists": true,
+          "permission": {
+            "actor": "other",
+            "allowed": false,
+            "visibility": "private"
+          },
+          "raw_counts": {
+            "empty": 0,
+            "evidence": 1,
+            "nonempty": 1,
+            "review_required": 0,
+            "reviewed": 0
+          },
+          "sensitive_sha256": "f30a86cf672334799e7c0a7061d86aa36467d705d557d41b93252a6f9392b814",
+          "status": "ready",
+          "structure": true,
+          "version_id": 20026,
+          "warning": false
+        },
+        {
+          "effective_completed_ordinals": [],
+          "evidence": [],
+          "expected_error": "object_unavailable",
+          "fixture_version": "ldb-quality-assets-v2",
+          "format": null,
+          "id": "missing-target",
+          "material_id": 10027,
+          "object_exists": false,
+          "permission": {
+            "actor": "owner",
+            "allowed": false,
+            "visibility": null
+          },
+          "raw_counts": null,
+          "sensitive_sha256": "f30a86cf672334799e7c0a7061d86aa36467d705d557d41b93252a6f9392b814",
+          "status": null,
+          "structure": null,
+          "version_id": 20027,
+          "warning": false
         }
       ],
-      "expected_error": "object_unavailable",
-      "format": "md",
-      "id": "O06",
-      "material_id": 10006,
-      "status": "ready",
-      "structure": true,
-      "version_id": 20006,
-      "warning": false
+      "id": "O06"
     }
   ],
   "reviewed_at": "2026-01-01T00:00:00Z",
-  "version": "ldb-quality-assets-v1"
+  "version": "ldb-quality-assets-v2"
 }

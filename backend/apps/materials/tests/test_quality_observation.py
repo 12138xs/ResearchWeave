@@ -320,35 +320,77 @@ class QualityObservationTests(TestCase):
 
     def test_frozen_synthetic_assets(self):
         manifest = json.loads((Path(__file__).parent / 'fixtures' / 'quality_observation_v1.json').read_text())
-        self.assertEqual(manifest['version'], 'ldb-quality-assets-v1')
-        # 冻结合成资产：UTF-8、键排序、无缩进/多余空白、不转义 Unicode。
+        self.assertEqual(manifest['version'], 'ldb-quality-assets-v2')
+        # UTF-8、键排序、无缩进/尾随换行、不转义 Unicode；修改资产须显式复审。
         canonical = json.dumps(manifest, ensure_ascii=False, sort_keys=True, separators=(',', ':')).encode('utf-8')
         self.assertEqual(hashlib.sha256(canonical).hexdigest(),
-                         '3486c22d85ea37780857a04323eb145e437ffa81cfd70190eddfd5927b6d7dd1')
-        for asset in manifest['assets']:
-            with self.subTest(asset=asset['id']):
-                material = Material.objects.create(id=asset['material_id'], owner=self.owner,
-                                                   title=SENTINEL, visibility='private')
-                version = MaterialVersion.objects.create(
-                    id=asset['version_id'], material=material, number=1, sha256='a' * 64,
-                    format=asset['format'], status=asset['status'], size=1, created_by=self.owner,
-                    warnings=[SENTINEL] if asset['warning'] else [],
-                )
-                if asset['structure']:
-                    StructureIndex.objects.create(version=version, parser_version='synthetic-v1',
-                                                  source_sha256='a' * 64, is_current=True)
-                for row in asset['evidence']:
-                    self.evidence(version, text='x' if row['nonempty'] else '',
-                                  flag=row['flag'], by=row['by'], at=row['at'])
-                if asset['actor'] == 'other':
-                    # O06 只有权限拒绝 oracle，不能返回可访问的质量结果。
-                    self.assertNotIn('expected', asset)
-                    self.assertEqual(asset['expected_error'], 'object_unavailable')
-                    self.assert_safe_failure(lambda: self.observe(version, self.other), asset['expected_error'])
-                else:
-                    result = self.observe(version)
-                    self.assertEqual({key: result[key] for key in ('assessment', 'review_state', 'counts')}, asset['expected'])
-                    self.assertEqual(self.codes(result), asset['issues'])
+                         '11291937e968d6ca3043aa7454e3a82d185e1a983d3ff75157f3b2a4bc2380ee')
+        self.assertEqual([group['id'] for group in manifest['assets']],
+                         ['O01', 'O02', 'O03', 'O04', 'O05', 'O06'])
+        self.assertEqual(sum(len(group['cases']) for group in manifest['assets']), 27)
+        targets = set()
+        for group in manifest['assets']:
+            for asset in group['cases']:
+                with self.subTest(group=group['id'], case=asset['id']):
+                    self.assertEqual(asset['fixture_version'], manifest['version'])
+                    self.assertEqual(asset['sensitive_sha256'], hashlib.sha256(SENTINEL.encode()).hexdigest())
+                    target = (asset['material_id'], asset['version_id'])
+                    self.assertNotIn(target, targets)
+                    targets.add(target)
+                    actor = self.owner if asset['permission']['actor'] == 'owner' else self.other
+                    if not asset['object_exists']:
+                        self.assertFalse(Material.objects.filter(pk=target[0]).exists())
+                        self.assertFalse(MaterialVersion.objects.filter(pk=target[1]).exists())
+                        for key in ('status', 'format', 'structure', 'raw_counts'):
+                            self.assertIsNone(asset[key])
+                        self.assertEqual(asset['evidence'], [])
+                        self.assertEqual(asset['effective_completed_ordinals'], [])
+                    else:
+                        material = Material.objects.create(id=target[0], owner=self.owner, title=SENTINEL,
+                                                           visibility=asset['permission']['visibility'])
+                        version = MaterialVersion.objects.create(
+                            id=target[1], material=material, number=1, sha256='a' * 64,
+                            format=asset['format'], status=asset['status'], size=1, created_by=self.owner,
+                            filename=SENTINEL, storage_key=SENTINEL, error=SENTINEL,
+                            warnings=[SENTINEL] if asset['warning'] else [],
+                        )
+                        if asset['structure']:
+                            StructureIndex.objects.create(version=version, parser_version='synthetic-v1',
+                                                          source_sha256='a' * 64, is_current=True)
+                        for row in asset['evidence']:
+                            evidence = self.evidence(version, text=SENTINEL if row['nonempty'] else '',
+                                                     flag=row['flag'], by=row['by'], at=row['at'])
+                            self.assertEqual(evidence.ordinal, row['ordinal'])
+                            if row['at']:
+                                self.assertEqual(evidence.reviewed_at.isoformat(),
+                                                 manifest['reviewed_at'].replace('Z', '+00:00'))
+                        rows = asset['evidence']
+                        self.assertEqual(asset['raw_counts'], {
+                            'evidence': len(rows), 'nonempty': sum(r['nonempty'] for r in rows),
+                            'empty': sum(not r['nonempty'] for r in rows),
+                            'review_required': sum(r['flag'] for r in rows),
+                            'reviewed': sum(r['by'] and r['at'] for r in rows),
+                        })
+                        self.assertEqual(asset['effective_completed_ordinals'], [r['ordinal'] for r in rows
+                            if r['nonempty'] and not r['flag'] and r['by'] and r['at']])
+                    if not asset['permission']['allowed']:
+                        # 无权与不存在只冻结相同拒绝 oracle，不给可访问质量结果。
+                        self.assertNotIn('expected', asset)
+                        self.assertEqual(asset['expected_error'], 'object_unavailable')
+                        self.assert_safe_failure(lambda: observe_version_quality(actor, *target), asset['expected_error'])
+                    else:
+                        result = observe_version_quality(actor, *target)
+                        expected = asset['expected']
+                        self.assertEqual(result['assessment'], expected['assessment'])
+                        self.assertEqual(result['review_state'], expected['review_state'])
+                        self.assertEqual(result['processing_state'],
+                                         asset['status'] if asset['status'] != 'unexpected' else 'unknown')
+                        self.assertEqual(result['counts'], asset['raw_counts'])
+                        self.assertEqual(result['native_ref'], {'material_id': target[0], 'version_id': target[1]})
+                        self.assertEqual(result['structure_state'], 'present' if asset['structure'] else 'missing')
+                        self.assertEqual(result['issues'], [dict(code=code, severity=ISSUES[code][0], scope=ISSUES[code][1])
+                                                           for code in expected['issues']])
+                        self.assertNotIn(SENTINEL, json.dumps(result))
 
     def test_obs01_fixed_version_never_selects_latest(self):
         old = self.make_version()
