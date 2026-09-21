@@ -103,6 +103,7 @@ INSTALLED_APPS = [
     "apps.storage",
     "apps.materials",
     "apps.exports",
+    "apps.registry",
 ]
 
 MIDDLEWARE = [
@@ -219,3 +220,6 @@ WEB_SEARCH_PROVIDER = os.getenv("WEB_SEARCH_PROVIDER", "disabled")
 WEB_SEARCH_ENDPOINT = os.getenv("WEB_SEARCH_ENDPOINT", "")
 WEB_SEARCH_API_KEY = os.getenv("WEB_SEARCH_API_KEY", "")
 WEB_SEARCH_TIMEOUT_SECONDS = int(os.getenv("WEB_SEARCH_TIMEOUT_SECONDS", "12"))
+
+# 仅允许显式开启旁路登记，不改变任何业务读路径。
+REGISTRY_BACKFILL_ENABLED = os.getenv("REGISTRY_BACKFILL_ENABLED", "false").lower() == "true"
