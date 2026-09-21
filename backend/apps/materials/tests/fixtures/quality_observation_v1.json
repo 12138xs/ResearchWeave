@@ -176,20 +176,9 @@
           "nonempty": true
         }
       ],
-      "expected": {
-        "assessment": "usable",
-        "counts": {
-          "empty": 0,
-          "evidence": 1,
-          "nonempty": 1,
-          "review_required": 0,
-          "reviewed": 0
-        },
-        "review_state": "not_required"
-      },
+      "expected_error": "object_unavailable",
       "format": "md",
       "id": "O06",
-      "issues": [],
       "material_id": 10006,
       "status": "ready",
       "structure": true,

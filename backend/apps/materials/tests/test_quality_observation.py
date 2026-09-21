@@ -1,5 +1,6 @@
 """LDB-2B：仅合成资产；OBS-15 的 PostgreSQL 并发验收另行执行。"""
 import io
+import hashlib
 import json
 from contextlib import ExitStack, redirect_stderr, redirect_stdout
 from itertools import product
@@ -320,6 +321,10 @@ class QualityObservationTests(TestCase):
     def test_frozen_synthetic_assets(self):
         manifest = json.loads((Path(__file__).parent / 'fixtures' / 'quality_observation_v1.json').read_text())
         self.assertEqual(manifest['version'], 'ldb-quality-assets-v1')
+        # 冻结合成资产：UTF-8、键排序、无缩进/多余空白、不转义 Unicode。
+        canonical = json.dumps(manifest, ensure_ascii=False, sort_keys=True, separators=(',', ':')).encode('utf-8')
+        self.assertEqual(hashlib.sha256(canonical).hexdigest(),
+                         '3486c22d85ea37780857a04323eb145e437ffa81cfd70190eddfd5927b6d7dd1')
         for asset in manifest['assets']:
             with self.subTest(asset=asset['id']):
                 material = Material.objects.create(id=asset['material_id'], owner=self.owner,
@@ -336,7 +341,10 @@ class QualityObservationTests(TestCase):
                     self.evidence(version, text='x' if row['nonempty'] else '',
                                   flag=row['flag'], by=row['by'], at=row['at'])
                 if asset['actor'] == 'other':
-                    self.assert_safe_failure(lambda: self.observe(version, self.other), 'object_unavailable')
+                    # O06 只有权限拒绝 oracle，不能返回可访问的质量结果。
+                    self.assertNotIn('expected', asset)
+                    self.assertEqual(asset['expected_error'], 'object_unavailable')
+                    self.assert_safe_failure(lambda: self.observe(version, self.other), asset['expected_error'])
                 else:
                     result = self.observe(version)
                     self.assertEqual({key: result[key] for key in ('assessment', 'review_state', 'counts')}, asset['expected'])
