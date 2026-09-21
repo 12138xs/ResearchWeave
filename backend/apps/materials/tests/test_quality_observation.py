@@ -10,7 +10,7 @@ from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
-from django.db import DatabaseError, connection
+from django.db import DatabaseError, connection, transaction
 from django.test import TestCase
 from django.test.utils import CaptureQueriesContext
 
@@ -296,12 +296,27 @@ class QualityObservationTests(TestCase):
     def test_obs13_malformed_evidence_storage(self):
         version = self.make_version()
         evidence = self.evidence(version)
+        original = Evidence.objects.filter(pk=evidence.pk).values().get()
+        expected = self.observe(version)
         for field, value in (('review_required', 2), ('reviewed_at', 'not-a-date')):
             with self.subTest(field=field):
-                with connection.cursor() as cursor:
-                    cursor.execute('UPDATE materials_evidence SET ' + field + ' = %s WHERE id = %s', [value, evidence.pk])
-                self.assert_safe_failure(lambda: self.observe(version), 'observation_failed')
-                Evidence.objects.filter(pk=evidence.pk).update(review_required=False, reviewed_at=None)
+                if connection.vendor == 'postgresql':
+                    # 类型检查先行拒绝；先退出 savepoint 再捕获，外层事务仍可查询。
+                    with self.assertRaises(DatabaseError):
+                        with transaction.atomic():
+                            with connection.cursor() as cursor:
+                                cursor.execute('UPDATE materials_evidence SET ' + field + ' = %s WHERE id = %s',
+                                               [value, evidence.pk])
+                    self.assertFalse(connection.needs_rollback)
+                    self.assertEqual(Evidence.objects.filter(pk=evidence.pk).values().get(), original)
+                    self.assertEqual(self.observe(version), expected)
+                else:
+                    self.assertEqual(connection.vendor, 'sqlite')
+                    with connection.cursor() as cursor:
+                        cursor.execute('UPDATE materials_evidence SET ' + field + ' = %s WHERE id = %s',
+                                       [value, evidence.pk])
+                    self.assert_safe_failure(lambda: self.observe(version), 'observation_failed')
+                    Evidence.objects.filter(pk=evidence.pk).update(review_required=False, reviewed_at=None)
 
     def test_obs14_search_agent_and_fixed_locator_unchanged(self):
         from apps.assistant.knowledge import search_knowledge
